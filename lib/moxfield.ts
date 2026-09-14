@@ -65,7 +65,7 @@ export function parseMoxfieldCsv(file: File): Promise<MoxfieldRow[]> {
             finish: ["true", "yes", "foil", "1"].includes(rawFinish) ? "foil" : (rawFinish || "nonfoil"),
           };
         }).filter((row) => row.name || row.scryfallId || (row.setCode && row.collectorNumber));
-        if (!rows.length) return reject(new Error("El archivo no contiene filas reconocibles de Moxfield."));
+        if (!rows.length) return reject(new Error("The file does not contain recognizable Moxfield rows."));
         resolve(rows);
       },
       error(error) { reject(error); },
@@ -82,14 +82,14 @@ export async function resolveWithScryfall(row: MoxfieldRow): Promise<ResolvedCar
   if (/^[0-9a-f-]{36}$/i.test(row.scryfallId)) url = `https://api.scryfall.com/cards/${row.scryfallId}`;
   else if (row.setCode && row.collectorNumber) url = `https://api.scryfall.com/cards/${encodeURIComponent(row.setCode)}/${encodeURIComponent(row.collectorNumber)}`;
   else if (row.name) url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(row.name)}${row.setCode ? `&set=${encodeURIComponent(row.setCode)}` : ""}`;
-  if (!url) return { ...row, status: "unresolved", error: "Faltan nombre o datos de impresión." };
+  if (!url) return { ...row, status: "unresolved", error: "Card name or printing details are missing." };
   try {
     const response = await fetch(url);
-    if (!response.ok) throw new Error(response.status === 404 ? "Impresión no encontrada" : `Scryfall respondió ${response.status}`);
+    if (!response.ok) throw new Error(response.status === 404 ? "Printing not found" : `Scryfall returned ${response.status}`);
     const result = await response.json();
     return { ...row, status: "resolved", card: { scryfall_id: result.id, name: result.name, set_code: result.set, set_name: result.set_name, collector_number: result.collector_number, colors: result.colors || [], rarity: result.rarity, image_uri: cardImage(result) } };
   } catch (error) {
-    return { ...row, status: "unresolved", error: error instanceof Error ? error.message : "No se pudo validar" };
+    return { ...row, status: "unresolved", error: error instanceof Error ? error.message : "Validation failed" };
   }
 }
 
