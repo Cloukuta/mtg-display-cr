@@ -1,22 +1,22 @@
-# MTG Vitrina CR
+# MTG Display CR
 
-Catálogos públicos multiusuario de cartas Magic: The Gathering con precios en colones costarricenses y consultas de compra por WhatsApp.
+Multi-user public displays for Magic: The Gathering cards, with prices in Costa Rican colones and purchase inquiries through WhatsApp.
 
-## Estado del MVP
+## MVP status
 
-- Catálogo responsive de demostración.
-- Autenticación Google mediante Supabase.
-- Perfil y URL pública por vendedor (`/v/{slug}`).
-- Inventario privado protegido con Row Level Security.
-- Importación Moxfield CSV y resolución de impresiones mediante Scryfall.
-- Cantidad, condición, idioma, acabado, precio CRC y disponibilidad.
-- Carrito de consulta y mensaje de WhatsApp.
+- Responsive demonstration catalog.
+- Google authentication through Supabase.
+- A seller profile and public URL for each user (`/v/{slug}`).
+- Private inventory protected with Row Level Security.
+- Moxfield CSV import with printing resolution through Scryfall.
+- Quantity, condition, language, finish, CRC price, and availability management.
+- Inquiry cart with a prefilled WhatsApp message.
 
-No incluye pagos, comisiones, envíos, chat interno ni cuentas para compradores.
+The MVP does not include payments, commissions, shipping, internal chat, or buyer accounts.
 
-## Desarrollo local
+## Local development
 
-Requisitos: Node.js 22+ y pnpm.
+Requirements: Node.js 22+ and pnpm.
 
 ```bash
 pnpm install
@@ -24,7 +24,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Configura en `.env.local`:
+Configure these values in `.env.local`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -32,37 +32,36 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-## Preparar Supabase
+## Supabase setup
 
-1. Crea un proyecto gratuito.
-2. Ejecuta `supabase/migrations/202609140001_initial_schema.sql` desde SQL Editor.
-3. En Authentication → Providers, habilita Google.
-4. Añade `http://localhost:3000/dashboard` y la URL de producción `/dashboard` a las URLs permitidas.
-5. Copia la Project URL y la anon key a las variables de entorno.
+1. Create a Supabase project.
+2. Run `supabase/migrations/202609140001_initial_schema.sql` in the SQL Editor.
+3. In Authentication → Providers, enable Google.
+4. Add `http://localhost:3000/dashboard` and the production `/dashboard` URL to the allowed redirect URLs.
+5. Copy the Project URL and anon key into the environment variables.
 
-La clave `service_role` no se utiliza en el navegador y nunca debe incluirse en GitHub.
+The `service_role` key is not used in the browser and must never be committed to GitHub.
 
-## Importación Moxfield
+## Moxfield import
 
-El importador reconoce variaciones comunes de `Quantity`, `Name`, `Edition/Set`, `Collector Number`, `Scryfall ID`, `Condition`, `Language` y `Finish/Foil`.
+The importer recognizes common variations of `Quantity`, `Name`, `Edition/Set`, `Collector Number`, `Scryfall ID`, `Condition`, `Language`, and `Finish/Foil`.
 
-La resolución sigue este orden: Scryfall ID, set + collector number y nombre exacto. Las filas no resueltas permanecen visibles para revisión.
+Printing resolution follows this order: Scryfall ID, set + collector number, then exact card name. Unresolved rows remain visible for review.
 
-## Validación
+## Validation
 
 ```bash
 pnpm build
 ```
 
-GitHub Actions ejecuta el build en cada push y pull request hacia `main`.
+GitHub Actions runs the build on every push and pull request targeting `main`.
 
-## Datos y seguridad
+## Data and security
 
-- Los precios CRC se almacenan como enteros.
-- RLS limita escritura y administración al propietario.
-- Un catálogo solo es público cuando el vendedor lo activa.
-- Solo las cartas disponibles y con cantidad mayor a cero son visibles públicamente.
-- El comprador no necesita cuenta.
+- CRC prices are stored as integers.
+- Row Level Security limits writes and inventory management to the owner.
+- A display becomes public only after the seller publishes it.
+- Only available cards with a quantity greater than zero are publicly visible.
+- Buyers do not need an account.
 
-Los datos de Magic y las imágenes provienen de Scryfall. Magic: The Gathering pertenece a Wizards of the Coast.
-
+Magic card data and images are provided by Scryfall. Magic: The Gathering is owned by Wizards of the Coast.
