@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MTG Vitrina CR | Catálogo de Jean Carlos",
-  description: "Cartas de Magic: The Gathering disponibles en Costa Rica, con precios en colones y consulta directa por WhatsApp.",
+  title: "MTG Display CR | Jean Carlos's Card Catalog",
+  description: "Magic: The Gathering cards available in Costa Rica, priced in colones with direct WhatsApp inquiries.",
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es"><body className="antialiased">{children}</body></html>;
+  return <html lang="en"><body className="antialiased">{children}</body></html>;
 }
