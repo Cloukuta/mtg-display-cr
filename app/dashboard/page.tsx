@@ -123,7 +123,122 @@ export default function Dashboard() {
         <section className="rounded-3xl border border-white/10 bg-white/[.035] p-6"><p className="text-xs font-bold uppercase tracking-[.15em] text-[#b9f54a]">Import</p><h2 className="mt-2 font-serif text-3xl">Upload Moxfield CSV</h2><p className="mt-2 text-sm leading-relaxed text-white/50">Each printing is validated by Scryfall ID or set + collector number before it is saved.</p>
           <label className="mt-5 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/20 bg-black/15 p-5 text-center hover:border-[#b9f54a]/60"><UploadCloud className="mb-2 text-[#b9f54a]" /><span className="font-semibold">Select CSV file</span><span className="mt-1 text-xs text-white/40">Maximum 1,000 rows</span><input type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => e.target.files?.[0] && void readFile(e.target.files[0])} /></label>
           {working && progress > 0 && <div className="mt-4"><div className="h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-[#b9f54a]" style={{ width: `${Math.min(100, progress / Math.max(1, progress) * 100)}%` }} /></div><p className="mt-2 text-xs text-white/40">{progress} rows validated</p></div>}
-          {preview.length > 0 && <div className="mt-5"><div className="flex gap-3 text-sm"><span className="text-[#b9f54a]">{resolved.length} resolved</span><span className="text-amber-300">{unresolved.length} need review</span></div><label className="mt-4 grid gap-1.5 text-sm text-white/60">Duplicates<select value={strategy} onChange={(e) => setStrategy(e.target.value as typeof strategy)} className="h-11 rounded-xl border border-white/10 bg-[#151917] px-3 text-white"><option value="sum">Add quantities</option><option value="replace">Replace quantities</option><option value="skip">Skip duplicates</option></select></label><button onClick={importCards} disabled={working || !resolved.length} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#b9f54a] font-bold text-[#11150d] disabled:opacity-40"><FileUp size={17} /> Import {resolved.length} cards</button></div>}
+          {preview.length > 0 && (
+  <div className="mt-5">
+    <div className="flex flex-wrap gap-3 text-sm">
+      <span className="text-[#b9f54a]">
+        {resolved.length} resolved
+      </span>
+
+      <span className="text-amber-300">
+        {unresolved.length} need review
+      </span>
+    </div>
+
+    {unresolved.length > 0 && (
+      <div className="mt-5 overflow-hidden rounded-2xl border border-amber-400/20 bg-amber-300/[.04]">
+        <div className="border-b border-amber-400/15 px-4 py-3">
+          <div className="flex items-center gap-2 text-amber-300">
+            <AlertCircle size={18} />
+
+            <span className="font-semibold">
+              Cards needing review
+            </span>
+          </div>
+
+          <p className="mt-1 text-xs leading-relaxed text-white/45">
+            These cards were not imported because their exact printing
+            could not be validated with Scryfall.
+          </p>
+        </div>
+
+        <div className="max-h-96 divide-y divide-white/10 overflow-y-auto">
+          {unresolved.map((row) => (
+            <div
+              key={`${row.rowNumber}-${row.name}-${row.setCode}-${row.collectorNumber}`}
+              className="p-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-semibold text-[#f4f3ed]">
+                    {row.name || "Unknown card"}
+                  </p>
+
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/45">
+                    <span>CSV row {row.rowNumber}</span>
+
+                    {row.setCode && (
+                      <span>
+                        Set: {row.setCode.toUpperCase()}
+                      </span>
+                    )}
+
+                    {row.collectorNumber && (
+                      <span>
+                        Collector: #{row.collectorNumber}
+                      </span>
+                    )}
+
+                    {row.language && (
+                      <span>
+                        Language: {row.language}
+                      </span>
+                    )}
+
+                    {row.finish && (
+                      <span>
+                        Finish: {row.finish}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <span className="shrink-0 rounded-full border border-amber-400/20 bg-amber-300/10 px-2.5 py-1 text-[11px] font-semibold text-amber-300">
+                  Review
+                </span>
+              </div>
+
+              <div className="mt-3 rounded-xl bg-black/20 px-3 py-2">
+                <p className="text-xs text-white/35">
+                  Reason
+                </p>
+
+                <p className="mt-0.5 text-sm text-amber-200">
+                  {row.error || "Printing could not be validated."}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <label className="mt-4 grid gap-1.5 text-sm text-white/60">
+      Duplicates
+
+      <select
+        value={strategy}
+        onChange={(e) =>
+          setStrategy(e.target.value as typeof strategy)
+        }
+        className="h-11 rounded-xl border border-white/10 bg-[#151917] px-3 text-white"
+      >
+        <option value="sum">Add quantities</option>
+        <option value="replace">Replace quantities</option>
+        <option value="skip">Skip duplicates</option>
+      </select>
+    </label>
+
+    <button
+      onClick={importCards}
+      disabled={working || !resolved.length}
+      className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#b9f54a] font-bold text-[#11150d] disabled:opacity-40"
+    >
+      <FileUp size={17} />
+      Import {resolved.length} cards
+    </button>
+  </div>
+)}
         </section>
       </div>
 
