@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import {
   AlertCircle,
@@ -11,7 +11,14 @@ import {
   RefreshCw,
   Save,
 } from "lucide-react";
+
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  DEFAULT_LANGUAGE,
+  getTranslation,
+  type Language,
+} from "@/lib/i18n";
+import LanguageSwitch from "@/components/LanguageSwitch";
 
 type PricingSettings = {
   usd_to_crc: number;
@@ -25,6 +32,10 @@ export default function PricingSettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+
+  const [language, setLanguage] =
+    useState<Language>(DEFAULT_LANGUAGE);
+
   const [notice, setNotice] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -32,6 +43,15 @@ export default function PricingSettingsPage() {
     usd_to_crc: 520,
     discount_percent: 20,
   });
+
+  const t = getTranslation(language);
+
+  const handleLanguageChange = useCallback(
+    (nextLanguage: Language) => {
+      setLanguage(nextLanguage);
+    },
+    []
+  );
 
   useEffect(() => {
     if (!supabase) {
@@ -44,9 +64,11 @@ export default function PricingSettingsPage() {
       setLoading(false);
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
+    const { data } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user || null);
+      }
+    );
 
     return () => data.subscription.unsubscribe();
   }, [supabase]);
@@ -87,7 +109,7 @@ export default function PricingSettingsPage() {
 
     if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
       setSuccess(false);
-      setNotice("USD → CRC must be greater than ₡0.");
+      setNotice(t.pricing.exchangeError);
       return;
     }
 
@@ -97,7 +119,7 @@ export default function PricingSettingsPage() {
       discount > 100
     ) {
       setSuccess(false);
-      setNotice("Discount must be between 0% and 100%.");
+      setNotice(t.pricing.discountError);
       return;
     }
 
@@ -128,9 +150,7 @@ export default function PricingSettingsPage() {
         discount_percent: discount,
       });
 
-      setNotice(
-        "Pricing settings saved. Default and Discount prices will use these values."
-      );
+      setNotice(t.pricing.saved);
       setSuccess(true);
     }
 
@@ -140,7 +160,7 @@ export default function PricingSettingsPage() {
   if (loading) {
     return (
       <main className="grid min-h-screen place-items-center bg-[#0b0e0d] text-white/60">
-        Loading pricing settings…
+        {t.pricing.loading}
       </main>
     );
   }
@@ -149,10 +169,16 @@ export default function PricingSettingsPage() {
     return (
       <main className="grid min-h-screen place-items-center bg-[#0b0e0d] p-5 text-[#f4f3ed]">
         <section className="max-w-lg rounded-3xl border border-amber-400/25 bg-amber-300/[.06] p-7">
+          <div className="mb-5 flex justify-end">
+            <LanguageSwitch
+              onLanguageChange={handleLanguageChange}
+            />
+          </div>
+
           <AlertCircle className="mb-4 text-amber-300" />
 
           <h1 className="font-serif text-3xl">
-            Supabase connection required
+            {t.pricing.supabaseRequired}
           </h1>
 
           <a
@@ -160,7 +186,7 @@ export default function PricingSettingsPage() {
             className="mt-6 inline-flex items-center gap-2 text-[#b9f54a]"
           >
             <ArrowLeft size={16} />
-            Back to Dashboard
+            {t.common.backToDashboard}
           </a>
         </section>
       </main>
@@ -171,24 +197,30 @@ export default function PricingSettingsPage() {
     return (
       <main className="grid min-h-screen place-items-center bg-[#0b0e0d] p-5 text-[#f4f3ed]">
         <section className="text-center">
+          <div className="mb-6 flex justify-center">
+            <LanguageSwitch
+              onLanguageChange={handleLanguageChange}
+            />
+          </div>
+
           <DollarSign
             className="mx-auto text-[#b9f54a]"
             size={42}
           />
 
           <h1 className="mt-4 font-serif text-3xl">
-            Pricing Settings
+            {t.pricing.title}
           </h1>
 
           <p className="mt-2 text-white/50">
-            Sign in from your dashboard to manage pricing.
+            {t.pricing.signInDescription}
           </p>
 
           <a
             href="/dashboard"
             className="mt-6 inline-flex rounded-xl bg-[#b9f54a] px-5 py-3 font-bold text-[#11150d]"
           >
-            Go to Dashboard
+            {t.pricing.goToDashboard}
           </a>
         </section>
       </main>
@@ -204,34 +236,47 @@ export default function PricingSettingsPage() {
   return (
     <main className="min-h-screen bg-[#0b0e0d] text-[#f4f3ed]">
       <header className="border-b border-white/10">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
           <a href="/dashboard" className="font-semibold">
             MTG Display CR
           </a>
 
-          <a
-            href="/dashboard"
-            className="flex items-center gap-2 text-sm text-white/55 transition hover:text-white"
-          >
-            <ArrowLeft size={16} />
-            Back to Dashboard
-          </a>
+          <div className="flex items-center gap-3">
+            <LanguageSwitch
+              onLanguageChange={handleLanguageChange}
+            />
+
+            <a
+              href="/dashboard"
+              className="hidden items-center gap-2 text-sm text-white/55 transition hover:text-white sm:flex"
+            >
+              <ArrowLeft size={16} />
+              {t.common.backToDashboard}
+            </a>
+          </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-5xl px-5 py-8">
+        <a
+          href="/dashboard"
+          className="mb-6 flex items-center gap-2 text-sm text-white/50 transition hover:text-white sm:hidden"
+        >
+          <ArrowLeft size={16} />
+          {t.common.backToDashboard}
+        </a>
+
         <div>
           <p className="text-xs font-bold uppercase tracking-[.15em] text-[#b9f54a]">
-            Seller configuration
+            {t.pricing.eyebrow}
           </p>
 
           <h1 className="mt-2 font-serif text-4xl">
-            Pricing Settings
+            {t.pricing.title}
           </h1>
 
           <p className="mt-3 max-w-2xl leading-relaxed text-white/50">
-            Control how Card Kingdom USD prices are converted
-            into your Costa Rican colón selling prices.
+            {t.pricing.description}
           </p>
         </div>
 
@@ -269,19 +314,18 @@ export default function PricingSettingsPage() {
 
                 <div>
                   <h2 className="font-serif text-2xl">
-                    USD → CRC Exchange Rate
+                    {t.pricing.exchangeTitle}
                   </h2>
 
                   <p className="mt-1 text-sm leading-relaxed text-white/45">
-                    Choose the colón value you want to use for each
-                    US dollar in your catalog.
+                    {t.pricing.exchangeDescription}
                   </p>
                 </div>
               </div>
 
               <label className="mt-6 block">
                 <span className="text-sm text-white/60">
-                  ₡ CRC per $1 USD
+                  {t.pricing.crcPerUsd}
                 </span>
 
                 <div className="mt-2 flex h-14 items-center rounded-xl border border-white/10 bg-black/20 focus-within:border-[#b9f54a]">
@@ -324,9 +368,7 @@ export default function PricingSettingsPage() {
               </div>
 
               <p className="mt-4 text-xs leading-relaxed text-white/35">
-                Changing this value automatically changes calculated
-                Default and Discount prices. Custom prices are not
-                affected.
+                {t.pricing.exchangeHelp}
               </p>
             </section>
 
@@ -338,19 +380,18 @@ export default function PricingSettingsPage() {
 
                 <div>
                   <h2 className="font-serif text-2xl">
-                    Discount / Bulk
+                    {t.pricing.discountTitle}
                   </h2>
 
                   <p className="mt-1 text-sm leading-relaxed text-white/45">
-                    Set the discount applied to cards using
-                    Discount pricing mode.
+                    {t.pricing.discountDescription}
                   </p>
                 </div>
               </div>
 
               <label className="mt-6 block">
                 <span className="text-sm text-white/60">
-                  Discount percentage
+                  {t.pricing.discountPercentage}
                 </span>
 
                 <div className="mt-2 flex h-14 items-center rounded-xl border border-white/10 bg-black/20 focus-within:border-[#b9f54a]">
@@ -394,8 +435,7 @@ export default function PricingSettingsPage() {
               </div>
 
               <p className="mt-4 text-xs leading-relaxed text-white/35">
-                This value can be changed whenever you want.
-                Only listings using Discount mode are affected.
+                {t.pricing.discountHelp}
               </p>
             </section>
 
@@ -407,25 +447,25 @@ export default function PricingSettingsPage() {
               <Save size={18} />
 
               {working
-                ? "Saving..."
-                : "Save Pricing Settings"}
+                ? t.common.saving
+                : t.pricing.saveButton}
             </button>
           </div>
 
           <div className="space-y-6">
             <section className="rounded-3xl border border-white/10 bg-white/[.035] p-6">
               <p className="text-xs font-bold uppercase tracking-[.15em] text-[#b9f54a]">
-                Live example
+                {t.pricing.liveExample}
               </p>
 
               <h2 className="mt-2 font-serif text-2xl">
-                $10 Card Kingdom card
+                {t.pricing.exampleTitle}
               </h2>
 
               <div className="mt-6 space-y-4">
                 <div className="rounded-xl border border-white/10 bg-black/15 p-4">
                   <p className="text-xs uppercase tracking-wide text-white/35">
-                    Card Kingdom
+                    {t.pricing.cardKingdom}
                   </p>
 
                   <strong className="mt-1 block text-xl">
@@ -435,11 +475,14 @@ export default function PricingSettingsPage() {
 
                 <div className="rounded-xl border border-white/10 bg-black/15 p-4">
                   <p className="text-xs uppercase tracking-wide text-white/35">
-                    Default
+                    {t.pricing.default}
                   </p>
 
                   <strong className="mt-1 block text-xl text-[#b9f54a]">
-                    ₡{Math.round(defaultExample).toLocaleString("es-CR")}
+                    ₡
+                    {Math.round(
+                      defaultExample
+                    ).toLocaleString("es-CR")}
                   </strong>
 
                   <p className="mt-1 text-xs text-white/35">
@@ -449,27 +492,29 @@ export default function PricingSettingsPage() {
 
                 <div className="rounded-xl border border-[#b9f54a]/20 bg-[#b9f54a]/[.04] p-4">
                   <p className="text-xs uppercase tracking-wide text-white/35">
-                    Discount
+                    {t.pricing.discount}
                   </p>
 
                   <strong className="mt-1 block text-xl text-[#b9f54a]">
-                    ₡{Math.round(discountExample).toLocaleString("es-CR")}
+                    ₡
+                    {Math.round(
+                      discountExample
+                    ).toLocaleString("es-CR")}
                   </strong>
 
                   <p className="mt-1 text-xs text-white/35">
-                    {settings.discount_percent}% off Default
+                    {settings.discount_percent}%{" "}
+                    {t.pricing.offDefault}
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-amber-400/20 bg-amber-300/[.04] p-4">
                   <p className="text-xs font-semibold text-amber-200">
-                    Custom ⚠
+                    {t.pricing.custom}
                   </p>
 
                   <p className="mt-2 text-xs leading-relaxed text-white/45">
-                    Manual CRC prices remain unchanged when the
-                    exchange rate, discount, or Card Kingdom price
-                    changes.
+                    {t.pricing.customWarning}
                   </p>
                 </div>
               </div>
@@ -483,19 +528,21 @@ export default function PricingSettingsPage() {
                 />
 
                 <h2 className="font-semibold">
-                  Card Kingdom Pricing
+                  {t.pricing.ckPricing}
                 </h2>
               </div>
 
               <p className="mt-3 text-sm leading-relaxed text-white/45">
-                Automatic Card Kingdom price updates will be
-                connected in the next pricing stage.
+                {t.pricing.ckDescription}
               </p>
 
               <div className="mt-4 rounded-xl border border-white/10 bg-black/15 p-3 text-sm">
-                <span className="text-white/35">Status:</span>
+                <span className="text-white/35">
+                  {t.pricing.status}
+                </span>
+
                 <span className="ml-2 text-amber-200">
-                  Pending integration
+                  {t.pricing.pendingIntegration}
                 </span>
               </div>
             </section>
@@ -504,7 +551,7 @@ export default function PricingSettingsPage() {
               href="/catalog"
               className="flex h-11 items-center justify-center rounded-xl border border-white/10 text-sm font-semibold text-white/65 transition hover:bg-white/[.04] hover:text-white"
             >
-              Open Catalog
+              {t.common.openCatalog}
             </a>
           </div>
         </div>
