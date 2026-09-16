@@ -14,6 +14,7 @@ type InventoryItem = { id:number; quantity:number; condition:string; language:st
 type PricingSettings = { usd_to_crc:number; discount_percent:number };
 
 const crc = new Intl.NumberFormat("es-CR", { style:"currency", currency:"CRC", maximumFractionDigits:0 });
+const ACTIVE_ORDER_STATUSES = ["inventory_confirmation","payment_pending","paid","preparing_shipment","shipped"];
 
 function calculatePrice(item:InventoryItem, settings:PricingSettings):number|null {
   if (item.pricing_mode === "custom") return item.custom_price_crc;
@@ -60,9 +61,9 @@ export default function CatalogPage() {
     async function loadCatalog(){
       setLoading(true);
       const [inventoryResult,settingsResult,pendingResult]=await Promise.all([
-        supabase.from("inventory_items").select(`id,quantity,condition,language,finish,available,pricing_mode,custom_price_crc,cards(name,set_code,set_name,collector_number,image_uri,cardkingdom_price_usd,cardkingdom_price_updated_at)`).eq("seller_id",user!.id).order("updated_at",{ascending:false}),
+        supabase.from("inventory_items").select(`id,quantity,condition,language,finish,available,pricing_mode,custom_price_crc,cards(name,set_code,set_name,collector_number,image_uri,cardkingdom_price_usd,cardkingdom_price_updated_at)`).eq("seller_id",user!.id).gt("quantity",0).order("updated_at",{ascending:false}),
         supabase.from("seller_pricing_settings").select("usd_to_crc,discount_percent").eq("seller_id",user!.id).maybeSingle(),
-        supabase.from("orders").select("id",{count:"exact",head:true}).eq("seller_id",user!.id).eq("status","pending")
+        supabase.from("orders").select("id",{count:"exact",head:true}).eq("seller_id",user!.id).in("status",ACTIVE_ORDER_STATUSES)
       ]);
       if(inventoryResult.error) setNotice(inventoryResult.error.message); else setInventory((inventoryResult.data||[]) as unknown as InventoryItem[]);
       if(settingsResult.data) setSettings({usd_to_crc:Number(settingsResult.data.usd_to_crc),discount_percent:Number(settingsResult.data.discount_percent)});
@@ -93,7 +94,7 @@ export default function CatalogPage() {
     if(!supabase||!user||!selected.length)return;
     const ok=window.confirm(es?`¿Eliminar ${selected.length} listado(s) de tu colección? Esta acción no se puede deshacer.`:`Remove ${selected.length} listing(s) from your collection? This cannot be undone.`);
     if(!ok)return;setWorking(true);setNotice("");
-    const {data:reserved,error:reservedError}=await supabase.from("order_items").select("inventory_item_id,orders!inner(status,seller_id)").in("inventory_item_id",selected).eq("orders.status","pending").eq("orders.seller_id",user.id);
+    const {data:reserved,error:reservedError}=await supabase.from("order_items").select("inventory_item_id,orders!inner(status,seller_id)").in("inventory_item_id",selected).in("orders.status",ACTIVE_ORDER_STATUSES).eq("orders.seller_id",user.id);
     if(reservedError){setNotice(reservedError.message);setWorking(false);return;}
     if((reserved||[]).length>0){setNotice(es?"No puedes eliminar cartas que forman parte de una venta pendiente. Cancela o completa primero ese pedido.":"Cards included in a pending sale cannot be removed. Complete or cancel that order first.");setWorking(false);return;}
     const {error}=await supabase.from("inventory_items").delete().eq("seller_id",user.id).in("id",selected);
