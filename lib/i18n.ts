@@ -15,6 +15,23 @@ export const translations = {
       loading: "Cargando...",
     },
 
+    navigation: {
+  seller: "Vendedor",
+  dashboard: "Panel",
+  catalog: "Mi catálogo",
+  importCards: "Importar cartas",
+  pricingSettings: "Configuración de precios",
+  preferences: "Preferencias",
+  language: "Idioma",
+  theme: "Tema",
+  viewPublicStore: "Ver tienda pública",
+  copyStoreLink: "Copiar enlace de la tienda",
+  catalogManagement: "Administrar catálogo",
+  signOut: "Cerrar sesión",
+  storeNotConfigured: "Tienda pública no configurada",
+  menu: "Menú",
+},
+
     pricing: {
       eyebrow: "Configuración del vendedor",
       title: "Configuración de precios",
@@ -105,6 +122,23 @@ export const translations = {
       openCatalog: "Open Catalog",
       loading: "Loading...",
     },
+
+    navigation: {
+  seller: "Seller",
+  dashboard: "Dashboard",
+  catalog: "My Catalog",
+  importCards: "Import Cards",
+  pricingSettings: "Pricing Settings",
+  preferences: "Preferences",
+  language: "Language",
+  theme: "Theme",
+  viewPublicStore: "View Public Store",
+  copyStoreLink: "Copy Store Link",
+  catalogManagement: "Catalog Management",
+  signOut: "Sign out",
+  storeNotConfigured: "Public store not configured",
+  menu: "Menu",
+},
 
     pricing: {
       eyebrow: "Seller configuration",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   BarChart3,
   Copy,
@@ -16,6 +16,13 @@ import {
 import LanguageSwitch from "@/components/LanguageSwitch";
 import ThemeSwitch from "@/components/ThemeSwitch";
 import { getSupabase } from "@/lib/supabase";
+
+import {
+  DEFAULT_LANGUAGE,
+  LANGUAGE_STORAGE_KEY,
+  getTranslation,
+  type Language,
+} from "@/lib/i18n";
 
 type AppMenuProps = {
   open: boolean;
@@ -34,6 +41,47 @@ export default function AppMenu({
 }: AppMenuProps) {
   const supabase = getSupabase();
 
+  const [language, setLanguage] =
+    useState<Language>(DEFAULT_LANGUAGE);
+
+  const t = getTranslation(language);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(
+      LANGUAGE_STORAGE_KEY
+    );
+
+    if (stored === "es" || stored === "en") {
+      setLanguage(stored);
+    }
+
+    function handleLanguageChange(event: Event) {
+      const customEvent =
+        event as CustomEvent<Language>;
+
+      if (
+        customEvent.detail !== "es" &&
+        customEvent.detail !== "en"
+      ) {
+        return;
+      }
+
+      setLanguage(customEvent.detail);
+    }
+
+    window.addEventListener(
+      "mtg-language-change",
+      handleLanguageChange
+    );
+
+    return () => {
+      window.removeEventListener(
+        "mtg-language-change",
+        handleLanguageChange
+      );
+    };
+  }, []);
+
   useEffect(() => {
     if (!open) return;
 
@@ -43,17 +91,29 @@ export default function AppMenu({
       }
     }
 
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener(
+      "keydown",
+      handleEscape
+    );
+
     document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener(
+        "keydown",
+        handleEscape
+      );
+
       document.body.style.overflow = "";
     };
   }, [open, onClose]);
 
   if (!open) return null;
 
+  /*
+   * The real public route remains /v/[slug].
+   * We intentionally hide /v/ from the seller label.
+   */
   const publicPath = sellerSlug
     ? `/v/${sellerSlug}`
     : null;
@@ -74,7 +134,10 @@ export default function AppMenu({
     try {
       await navigator.clipboard.writeText(url);
     } catch {
-      window.prompt("Copy your store URL:", url);
+      window.prompt(
+        t.navigation.copyStoreLink,
+        url
+      );
     }
   }
 
@@ -87,22 +150,22 @@ export default function AppMenu({
 
   const navigation = [
     {
-      label: "Dashboard",
+      label: t.navigation.dashboard,
       href: "/dashboard",
       icon: LayoutDashboard,
     },
     {
-      label: "My Catalog",
+      label: t.navigation.catalog,
       href: "/catalog",
       icon: Package,
     },
     {
-      label: "Import Cards",
+      label: t.navigation.importCards,
       href: "/import",
       icon: Upload,
     },
     {
-      label: "Pricing Settings",
+      label: t.navigation.pricingSettings,
       href: "/settings/pricing",
       icon: DollarSign,
     },
@@ -114,18 +177,18 @@ export default function AppMenu({
         type="button"
         aria-label="Close menu"
         onClick={onClose}
-        className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
+        className="app-overlay absolute inset-0 backdrop-blur-[2px]"
       />
 
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
-        className="absolute right-0 top-0 flex h-full w-[min(90vw,390px)] flex-col overflow-y-auto border-l border-white/10 bg-[#101411] text-[#f4f3ed] shadow-2xl"
+        className="app-surface absolute right-0 top-0 flex h-full w-[min(90vw,390px)] flex-col overflow-y-auto border-l border-border shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-5">
+        <div className="flex items-center justify-between border-b border-border px-5 py-5">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[.16em] text-[#b9f54a]">
+            <p className="text-xs font-bold uppercase tracking-[.16em] text-primary">
               MTG
             </p>
 
@@ -138,33 +201,33 @@ export default function AppMenu({
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-white/55 transition hover:bg-white/[.05] hover:text-white"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-border text-muted-foreground transition hover:bg-secondary hover:text-foreground"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="border-b border-white/10 px-5 py-5">
-          <p className="text-[10px] font-bold uppercase tracking-[.18em] text-white/30">
-            Seller
+        <div className="border-b border-border px-5 py-5">
+          <p className="text-[10px] font-bold uppercase tracking-[.18em] text-muted-foreground">
+            {t.navigation.seller}
           </p>
 
           <p className="mt-2 truncate font-semibold">
-            {sellerName || "MTG Display CR Seller"}
+            {sellerName || "MTG Display CR"}
           </p>
 
           {sellerSlug ? (
-            <p className="mt-1 truncate text-sm text-white/40">
-              /v/{sellerSlug}
+            <p className="mt-1 truncate text-sm text-muted-foreground">
+              @{sellerSlug}
             </p>
           ) : (
-            <p className="mt-1 text-sm text-white/35">
-              Public store not configured
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t.navigation.storeNotConfigured}
             </p>
           )}
         </div>
 
-        <nav className="border-b border-white/10 p-3">
+        <nav className="border-b border-border p-3">
           {navigation.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -176,8 +239,8 @@ export default function AppMenu({
                 onClick={onClose}
                 className={`mb-1 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                   active
-                    ? "bg-[#b9f54a] text-[#11150d]"
-                    : "text-white/60 hover:bg-white/[.05] hover:text-white"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
                 <Icon size={18} />
@@ -187,23 +250,23 @@ export default function AppMenu({
           })}
         </nav>
 
-        <div className="border-b border-white/10 px-5 py-5">
-          <p className="mb-4 text-[10px] font-bold uppercase tracking-[.18em] text-white/30">
-            Preferences
+        <div className="border-b border-border px-5 py-5">
+          <p className="mb-4 text-[10px] font-bold uppercase tracking-[.18em] text-muted-foreground">
+            {t.navigation.preferences}
           </p>
 
           <div className="space-y-5">
             <div>
-              <p className="mb-2 text-xs text-white/40">
-                Language
+              <p className="mb-2 text-xs text-muted-foreground">
+                {t.navigation.language}
               </p>
 
               <LanguageSwitch />
             </div>
 
             <div>
-              <p className="mb-2 text-xs text-white/40">
-                Theme
+              <p className="mb-2 text-xs text-muted-foreground">
+                {t.navigation.theme}
               </p>
 
               <ThemeSwitch />
@@ -211,36 +274,39 @@ export default function AppMenu({
           </div>
         </div>
 
-        <div className="space-y-1 border-b border-white/10 p-3">
+        <div className="space-y-1 border-b border-border p-3">
           {publicPath && (
             <>
               <a
                 href={publicPath}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-white/60 transition hover:bg-white/[.05] hover:text-white"
+                className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-muted-foreground transition hover:bg-secondary hover:text-foreground"
               >
                 <ExternalLink size={18} />
-                View Public Store
+                {t.navigation.viewPublicStore}
               </a>
 
               <button
                 type="button"
-                onClick={() => void copyStoreLink()}
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-white/60 transition hover:bg-white/[.05] hover:text-white"
+                onClick={() =>
+                  void copyStoreLink()
+                }
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-muted-foreground transition hover:bg-secondary hover:text-foreground"
               >
                 <Copy size={18} />
-                Copy Store Link
+                {t.navigation.copyStoreLink}
               </button>
             </>
           )}
 
           <a
             href="/catalog"
-            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-white/60 transition hover:bg-white/[.05] hover:text-white"
+            onClick={onClose}
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-muted-foreground transition hover:bg-secondary hover:text-foreground"
           >
             <BarChart3 size={18} />
-            Catalog Management
+            {t.navigation.catalogManagement}
           </a>
         </div>
 
@@ -248,10 +314,10 @@ export default function AppMenu({
           <button
             type="button"
             onClick={() => void signOut()}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-300 transition hover:bg-red-400/[.07]"
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-400 transition hover:bg-red-500/10"
           >
             <LogOut size={18} />
-            Sign out
+            {t.navigation.signOut}
           </button>
         </div>
       </aside>
