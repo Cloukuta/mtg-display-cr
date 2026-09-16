@@ -11,6 +11,20 @@ type LanguageSwitchProps = {
   onLanguageChange?: (language: Language) => void;
 };
 
+function getStoredLanguage(): Language {
+  if (typeof window === "undefined") {
+    return DEFAULT_LANGUAGE;
+  }
+
+  const stored = window.localStorage.getItem(
+    LANGUAGE_STORAGE_KEY
+  );
+
+  return stored === "en" || stored === "es"
+    ? stored
+    : DEFAULT_LANGUAGE;
+}
+
 export default function LanguageSwitch({
   onLanguageChange,
 }: LanguageSwitchProps) {
@@ -18,17 +32,37 @@ export default function LanguageSwitch({
     useState<Language>(DEFAULT_LANGUAGE);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(
-      LANGUAGE_STORAGE_KEY
-    );
-
-    const initialLanguage: Language =
-      stored === "en" || stored === "es"
-        ? stored
-        : DEFAULT_LANGUAGE;
+    const initialLanguage = getStoredLanguage();
 
     setLanguage(initialLanguage);
     onLanguageChange?.(initialLanguage);
+
+    function handleLanguageChange(event: Event) {
+      const customEvent =
+        event as CustomEvent<Language>;
+
+      if (
+        customEvent.detail !== "es" &&
+        customEvent.detail !== "en"
+      ) {
+        return;
+      }
+
+      setLanguage(customEvent.detail);
+      onLanguageChange?.(customEvent.detail);
+    }
+
+    window.addEventListener(
+      "mtg-language-change",
+      handleLanguageChange
+    );
+
+    return () => {
+      window.removeEventListener(
+        "mtg-language-change",
+        handleLanguageChange
+      );
+    };
   }, [onLanguageChange]);
 
   function changeLanguage(nextLanguage: Language) {
@@ -40,12 +74,13 @@ export default function LanguageSwitch({
     );
 
     window.dispatchEvent(
-      new CustomEvent("mtg-language-change", {
-        detail: nextLanguage,
-      })
+      new CustomEvent<Language>(
+        "mtg-language-change",
+        {
+          detail: nextLanguage,
+        }
+      )
     );
-
-    onLanguageChange?.(nextLanguage);
   }
 
   return (
@@ -53,6 +88,7 @@ export default function LanguageSwitch({
       <button
         type="button"
         onClick={() => changeLanguage("es")}
+        aria-label="Español"
         aria-pressed={language === "es"}
         className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
           language === "es"
@@ -66,6 +102,7 @@ export default function LanguageSwitch({
       <button
         type="button"
         onClick={() => changeLanguage("en")}
+        aria-label="English"
         aria-pressed={language === "en"}
         className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
           language === "en"

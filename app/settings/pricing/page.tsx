@@ -48,6 +48,42 @@ export default function PricingSettingsPage() {
 
   const t = getTranslation(language);
 
+  useEffect(() => {
+  const stored = window.localStorage.getItem(
+    "mtg-display-cr-language"
+  );
+
+  if (stored === "es" || stored === "en") {
+    setLanguage(stored);
+  }
+
+  function handleGlobalLanguageChange(event: Event) {
+    const customEvent =
+      event as CustomEvent<Language>;
+
+    if (
+      customEvent.detail !== "es" &&
+      customEvent.detail !== "en"
+    ) {
+      return;
+    }
+
+    setLanguage(customEvent.detail);
+  }
+
+  window.addEventListener(
+    "mtg-language-change",
+    handleGlobalLanguageChange
+  );
+
+  return () => {
+    window.removeEventListener(
+      "mtg-language-change",
+      handleGlobalLanguageChange
+    );
+  };
+}, []);
+
   const handleLanguageChange = useCallback(
     (nextLanguage: Language) => {
       setLanguage(nextLanguage);
