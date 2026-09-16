@@ -18,6 +18,7 @@ import {
   getTranslation,
   type Language,
 } from "@/lib/i18n";
+
 import LanguageSwitch from "@/components/LanguageSwitch";
 import AppHeader from "@/components/AppHeader";
 
@@ -237,26 +238,6 @@ export default function PricingSettingsPage() {
   return (
     <main className="min-h-screen bg-[#0b0e0d] text-[#f4f3ed]">
       <AppHeader currentPath="/settings/pricing" />
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
-          <a href="/dashboard" className="font-semibold">
-            MTG Display CR
-          </a>
-
-          <div className="flex items-center gap-3">
-            <LanguageSwitch
-              onLanguageChange={handleLanguageChange}
-            />
-
-            <a
-              href="/dashboard"
-              className="hidden items-center gap-2 text-sm text-white/55 transition hover:text-white sm:flex"
-            >
-              <ArrowLeft size={16} />
-              {t.common.backToDashboard}
-            </a>
-          </div>
-        </div>
-      </header>
 
       <div className="mx-auto max-w-5xl px-5 py-8">
         <a
