@@ -16,6 +16,8 @@ export type ResolvedCard = MoxfieldRow & {
   status: "resolved" | "unresolved";
   error?: string;
   validFinishes?: string[];
+  sourceFinish?: string;
+  finishDetectedBy?: "moxfield" | "scryfall";
   card?: {
     scryfall_id: string;
     name: string;
@@ -102,6 +104,19 @@ function cardImage(card: Record<string, any>) {
   return card.image_uris?.normal || card.card_faces?.find((face: any) => face.image_uris?.normal)?.image_uris.normal || null;
 }
 
+function detectSpecialFinish(card: Record<string, any>, sourceFinish: string) {
+  const promoTypes = Array.isArray(card.promo_types)
+    ? card.promo_types.map((value: unknown) => String(value).trim().toLowerCase().replace(/[-_\s]/g, ""))
+    : [];
+
+  // Scryfall represents Surge Foil as printing metadata rather than as one of
+  // the ordinary finishes. Moxfield therefore exports these cards as "foil".
+  // The exact Scryfall printing is authoritative for this special treatment.
+  if (promoTypes.includes("surgefoil")) return "surgefoil";
+
+  return sourceFinish;
+}
+
 export async function resolveWithScryfall(row: MoxfieldRow): Promise<ResolvedCard> {
   let url = "";
   if (/^[0-9a-f-]{36}$/i.test(row.scryfallId)) url = `https://api.scryfall.com/cards/${row.scryfallId}`;
@@ -110,14 +125,27 @@ export async function resolveWithScryfall(row: MoxfieldRow): Promise<ResolvedCar
   if (!url) return { ...row, status: "unresolved", error: "Card name or printing details are missing." };
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json;q=0.9,*/*;q=0.8",
+      },
+    });
     if (!response.ok) throw new Error(response.status === 404 ? "Printing not found" : `Scryfall returned ${response.status}`);
     const result = await response.json();
+    const sourceFinish = row.finish;
+    const detectedFinish = detectSpecialFinish(result, sourceFinish);
     const validFinishes = Array.isArray(result.finishes)
       ? Array.from(new Set(result.finishes.map((finish: string) => normalizeFinish(finish)))) as string[]
       : [];
+    if (detectedFinish === "surgefoil" && !validFinishes.includes("surgefoil")) validFinishes.push("surgefoil");
+
     return {
-      ...row, status: "resolved", validFinishes,
+      ...row,
+      finish: detectedFinish,
+      sourceFinish,
+      finishDetectedBy: detectedFinish !== sourceFinish ? "scryfall" : "moxfield",
+      status: "resolved",
+      validFinishes,
       card: {
         scryfall_id: result.id, name: result.name, set_code: result.set, set_name: result.set_name,
         collector_number: result.collector_number, colors: result.colors || [], rarity: result.rarity,
