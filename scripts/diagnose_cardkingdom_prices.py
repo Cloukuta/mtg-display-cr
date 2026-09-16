@@ -22,7 +22,7 @@ def main():
         prices_file = os.path.join(temp, "AllPricesToday.json.gz")
         updater.download(updater.IDENTIFIERS_URL, identifiers_file)
         updater.download(updater.PRICES_URL, prices_file)
-        index = updater.build_identifier_index(identifier_file, target_ids)
+        index = updater.build_identifier_index(identifiers_file, target_ids)
         raw_prices = updater.load_cardkingdom_prices(
             prices_file, index["relevant_uuids"]
         )
@@ -69,7 +69,9 @@ def main():
                     str(card.get("set_code") or "").strip().casefold(),
                     updater.normalize_collector_number(card.get("number")),
                 )
-                sibling_uuids = sorted(index["sibling_to_uuids"].get(sibling_key, set()))
+                sibling_uuids = sorted(
+                    index["sibling_to_uuids"].get(sibling_key, set())
+                )
                 print(f"Sibling UUID count: {len(sibling_uuids)}")
 
                 for sibling_uuid in sibling_uuids:
@@ -90,11 +92,16 @@ def main():
                 normal_ck_id = card.get("ck_ids", {}).get("normal")
                 if normal_ck_id:
                     ck_candidates = sorted(
-                        index["ck_to_uuids"]["normal"].get(str(normal_ck_id), set())
+                        index["ck_to_uuids"]["normal"].get(
+                            str(normal_ck_id), set()
+                        )
                     )
                     print(f"CK normal candidate UUIDs: {ck_candidates}")
                 else:
-                    print("CK normal candidate UUIDs: [] (no normal CK ID on target record)")
+                    print(
+                        "CK normal candidate UUIDs: [] "
+                        "(no normal CK ID on target record)"
+                    )
 
         print("\nEND UNRESOLVED NORMAL DEBUG")
 
