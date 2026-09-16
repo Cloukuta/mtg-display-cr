@@ -15,6 +15,7 @@ export type MoxfieldRow = {
 export type ResolvedCard = MoxfieldRow & {
   status: "resolved" | "unresolved";
   error?: string;
+  validFinishes?: string[];
   card?: {
     scryfall_id: string;
     name: string;
@@ -24,7 +25,6 @@ export type ResolvedCard = MoxfieldRow & {
     colors: string[];
     rarity: string;
     image_uri: string | null;
-    finishes: string[];
   };
 };
 
@@ -47,12 +47,9 @@ function value(record: Record<string, string>, candidates: readonly string[]) {
 function normalizeCondition(condition: string) {
   const normalized = condition.trim().toLowerCase();
   const conditions: Record<string, string> = {
-    "near mint": "NM", nm: "NM",
-    excellent: "EX", ex: "EX", "lightly played": "EX", lp: "EX",
-    "very good": "VG", vg: "VG", "moderately played": "VG", mp: "VG",
-    good: "G", g: "G",
-    played: "PL", pl: "PL", "heavily played": "PL", hp: "PL",
-    poor: "PO", po: "PO", damaged: "PO", dmg: "PO",
+    "near mint": "NM", nm: "NM", excellent: "EX", ex: "EX", "lightly played": "EX", lp: "EX",
+    "very good": "VG", vg: "VG", "moderately played": "VG", mp: "VG", good: "G", g: "G",
+    played: "PL", pl: "PL", "heavily played": "PL", hp: "PL", poor: "PO", po: "PO", damaged: "PO", dmg: "PO",
   };
   return conditions[normalized] ?? "NM";
 }
@@ -79,28 +76,18 @@ export function normalizeFinish(finish: string) {
   return normalized.replace(/\s/g, "") || "nonfoil";
 }
 
-function normalizeScryfallFinish(finish: string) {
-  const normalized = normalizeFinish(finish);
-  return normalized === "nonfoil" ? "nonfoil" : normalized;
-}
-
 export function parseMoxfieldCsv(file: File): Promise<MoxfieldRow[]> {
   return new Promise((resolve, reject) => {
     Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: "greedy",
-      transformHeader: (header) => header.trim(),
+      header: true, skipEmptyLines: "greedy", transformHeader: (header) => header.trim(),
       complete(result) {
         if (result.errors.length) return reject(new Error(result.errors[0].message));
         const rows = result.data.map((record, index) => ({
           rowNumber: index + 2,
           quantity: Math.max(1, Number.parseInt(value(record, aliases.quantity), 10) || 1),
-          name: value(record, aliases.name),
-          setCode: value(record, aliases.setCode).toLowerCase(),
-          collectorNumber: value(record, aliases.collectorNumber),
-          scryfallId: value(record, aliases.scryfallId),
-          condition: normalizeCondition(value(record, aliases.condition)),
-          language: normalizeLanguage(value(record, aliases.language)),
+          name: value(record, aliases.name), setCode: value(record, aliases.setCode).toLowerCase(),
+          collectorNumber: value(record, aliases.collectorNumber), scryfallId: value(record, aliases.scryfallId),
+          condition: normalizeCondition(value(record, aliases.condition)), language: normalizeLanguage(value(record, aliases.language)),
           finish: normalizeFinish(value(record, aliases.finish)),
         })).filter((row) => row.name || row.scryfallId || (row.setCode && row.collectorNumber));
         if (!rows.length) return reject(new Error("The file does not contain recognizable Moxfield rows."));
@@ -120,30 +107,21 @@ export async function resolveWithScryfall(row: MoxfieldRow): Promise<ResolvedCar
   if (/^[0-9a-f-]{36}$/i.test(row.scryfallId)) url = `https://api.scryfall.com/cards/${row.scryfallId}`;
   else if (row.setCode && row.collectorNumber) url = `https://api.scryfall.com/cards/${encodeURIComponent(row.setCode)}/${encodeURIComponent(row.collectorNumber)}`;
   else if (row.name) url = `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(row.name)}${row.setCode ? `&set=${encodeURIComponent(row.setCode)}` : ""}`;
-
   if (!url) return { ...row, status: "unresolved", error: "Card name or printing details are missing." };
 
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(response.status === 404 ? "Printing not found" : `Scryfall returned ${response.status}`);
     const result = await response.json();
-    const finishes = Array.isArray(result.finishes)
-      ? Array.from(new Set(result.finishes.map((finish: string) => normalizeScryfallFinish(finish))))
+    const validFinishes = Array.isArray(result.finishes)
+      ? Array.from(new Set(result.finishes.map((finish: string) => normalizeFinish(finish)))) as string[]
       : [];
-
     return {
-      ...row,
-      status: "resolved",
+      ...row, status: "resolved", validFinishes,
       card: {
-        scryfall_id: result.id,
-        name: result.name,
-        set_code: result.set,
-        set_name: result.set_name,
-        collector_number: result.collector_number,
-        colors: result.colors || [],
-        rarity: result.rarity,
+        scryfall_id: result.id, name: result.name, set_code: result.set, set_name: result.set_name,
+        collector_number: result.collector_number, colors: result.colors || [], rarity: result.rarity,
         image_uri: cardImage(result),
-        finishes,
       },
     };
   } catch (error) {
