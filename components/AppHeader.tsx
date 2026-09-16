@@ -74,7 +74,7 @@ export default function AppHeader({
 
   return (
     <>
-      <header className="border-b border-border bg-background/95 text-foreground backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 text-foreground shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
           <BrandLogo />
 
