@@ -59,15 +59,15 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --background: #f5f6f2;
-  --foreground: #151914;
+--background: #e9ebe6;
+--foreground: #1b201b;
 
-  --card: #ffffff;
-  --card-foreground: #151914;
+--card: #f4f5f1;
+--card-foreground: #1b201b;
 
-  --surface: #ffffff;
-  --surface-secondary: #f8f9f5;
-  --surface-tertiary: #eef0ea;
+--surface: #f1f2ee;
+--surface-secondary: #e5e8e2;
+--surface-tertiary: #daddd6;
 
   --primary: #9bd52f;
   --primary-foreground: #11150d;
