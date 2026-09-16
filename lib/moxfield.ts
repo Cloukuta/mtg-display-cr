@@ -46,12 +46,14 @@ function value(record: Record<string, string>, candidates: readonly string[]) {
   return key ? String(record[key] ?? "").trim() : "";
 }
 
-function normalizeCondition(condition: string) {
+export function normalizeCondition(condition: string) {
   const normalized = condition.trim().toLowerCase();
   const conditions: Record<string, string> = {
-    "near mint": "NM", nm: "NM", excellent: "EX", ex: "EX", "lightly played": "EX", lp: "EX",
-    "very good": "VG", vg: "VG", "moderately played": "VG", mp: "VG", good: "G", g: "G",
-    played: "PL", pl: "PL", "heavily played": "PL", hp: "PL", poor: "PO", po: "PO", damaged: "PO", dmg: "PO",
+    // Card Kingdom-compatible inventory grades.
+    "near mint": "NM", nm: "NM",
+    excellent: "EX", ex: "EX", "lightly played": "EX", lp: "EX",
+    "very good": "VG", vg: "VG", "moderately played": "VG", mp: "VG", played: "VG", pl: "VG",
+    good: "G", g: "G", "heavily played": "G", hp: "G", poor: "G", po: "G", damaged: "G", dmg: "G",
   };
   return conditions[normalized] ?? "NM";
 }
@@ -167,3 +169,4 @@ export async function resolveBatch(rows: MoxfieldRow[], onProgress?: (done: numb
   }
   return output;
 }
+
