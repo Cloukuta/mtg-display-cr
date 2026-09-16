@@ -7,7 +7,7 @@ import AppMenu from "@/components/AppMenu";
 import { getSupabase } from "@/lib/supabase";
 
 type SellerProfile = {
-  display_name: string | null;
+  public_name: string | null;
   slug: string | null;
 };
 
@@ -29,22 +29,38 @@ export default function AppHeader({
     if (!supabase) return;
 
     async function loadProfile() {
-      const { data: authData } =
+      const { data: authData, error: authError } =
         await supabase.auth.getUser();
+
+      if (authError) {
+        console.error(
+          "Could not load authenticated user:",
+          authError
+        );
+        return;
+      }
 
       const user = authData.user;
 
       if (!user) return;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
-        .select("display_name,slug")
+        .select("public_name,slug")
         .eq("id", user.id)
         .maybeSingle();
 
+      if (error) {
+        console.error(
+          "Could not load seller profile:",
+          error
+        );
+        return;
+      }
+
       if (data) {
         setProfile({
-          display_name: data.display_name ?? null,
+          public_name: data.public_name ?? null,
           slug: data.slug ?? null,
         });
       }
@@ -55,18 +71,18 @@ export default function AppHeader({
 
   return (
     <>
-      <header className="border-b border-white/10 bg-[#0b0e0d]/95 text-[#f4f3ed] backdrop-blur">
+      <header className="border-b border-border bg-background/95 text-foreground backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
           <a
             href="/dashboard"
             className="flex items-center gap-3"
           >
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#b9f54a] font-serif font-bold text-[#11150d]">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary font-serif font-bold text-primary-foreground">
               M
             </div>
 
             <div className="leading-tight">
-              <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#b9f54a]">
+              <p className="text-[10px] font-bold uppercase tracking-[.16em] text-primary">
                 MTG
               </p>
 
@@ -81,7 +97,7 @@ export default function AppHeader({
             onClick={() => setMenuOpen(true)}
             aria-label="Open navigation menu"
             aria-expanded={menuOpen}
-            className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.035] px-3 text-sm font-semibold text-white/65 transition hover:bg-white/[.06] hover:text-white"
+            className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
           >
             <Menu size={19} />
 
@@ -96,7 +112,7 @@ export default function AppHeader({
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         currentPath={currentPath}
-        sellerName={profile?.display_name}
+        sellerName={profile?.public_name}
         sellerSlug={profile?.slug}
       />
     </>
