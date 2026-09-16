@@ -59,40 +59,50 @@
 [data-theme="light"] {
   color-scheme: light;
 
---background: #e9ebe6;
---foreground: #1b201b;
+  /* Main surfaces */
+  --background: #e9ebe6;
+  --foreground: #111411;
 
---card: #f4f5f1;
---card-foreground: #1b201b;
+  --card: #f4f5f1;
+  --card-foreground: #111411;
 
---surface: #f1f2ee;
---surface-secondary: #e5e8e2;
---surface-tertiary: #daddd6;
+  --surface: #f1f2ee;
+  --surface-secondary: #e5e8e2;
+  --surface-tertiary: #daddd6;
 
-  --primary: #9bd52f;
-  --primary-foreground: #11150d;
+  /*
+   * Darker brand green for text/icons on light backgrounds.
+   * The bright lime remains available through
+   * --primary-bright when we need a filled CTA.
+   */
+  --primary: #527d08;
+  --primary-foreground: #ffffff;
+  --primary-bright: #a8ef32;
 
-  --secondary: #eef0ea;
-  --secondary-foreground: #151914;
+  --secondary: #dfe3dc;
+  --secondary-foreground: #111411;
 
-  --muted: #eef0ea;
-  --muted-foreground: #667066;
+  --muted: #dfe3dc;
+  --muted-foreground: #4b554c;
 
-  --accent: #9bd52f;
-  --accent-foreground: #11150d;
+  --accent: #527d08;
+  --accent-foreground: #ffffff;
 
-  --border: #1720171f;
-  --input: #17201724;
-  --ring: #87c21d;
+  --border: #1720172e;
+  --input: #17201735;
+  --ring: #527d08;
 
-  --overlay: rgba(15, 20, 15, 0.50);
+  --overlay: rgba(15, 20, 15, 0.55);
 
-  --text-primary: #151914;
-  --text-secondary: rgba(21, 25, 20, 0.70);
-  --text-muted: rgba(21, 25, 20, 0.55);
-  --text-subtle: rgba(21, 25, 20, 0.40);
+  /* Much stronger text contrast */
+  --text-primary: #111411;
+  --text-secondary: #343b35;
+  --text-muted: #505951;
+  --text-subtle: #697169;
 
-  --success: #79ad19;
+  --success: #527d08;
+
+  --radius: 0.8rem;
 }
 
 
@@ -295,4 +305,72 @@ select {
 
 [data-theme="light"] select {
   color: var(--foreground);
+}
+
+/* =========================================================
+   LIGHT MODE CONTRAST FIX
+   ========================================================= */
+
+[data-theme="light"] {
+  color: var(--foreground);
+}
+
+/* Legacy white text becomes readable dark text */
+
+[data-theme="light"] .text-white {
+  color: #111411 !important;
+}
+
+[data-theme="light"] .text-white\/30,
+[data-theme="light"] .text-white\/35,
+[data-theme="light"] .text-white\/40 {
+  color: #697169 !important;
+}
+
+[data-theme="light"] .text-white\/45,
+[data-theme="light"] .text-white\/50,
+[data-theme="light"] .text-white\/55 {
+  color: #505951 !important;
+}
+
+[data-theme="light"] .text-white\/60,
+[data-theme="light"] .text-white\/65 {
+  color: #343b35 !important;
+}
+
+/* Old lime text is too bright over light backgrounds */
+
+[data-theme="light"] .text-\[\#b9f54a\] {
+  color: #527d08 !important;
+}
+
+/* Keep lime buttons bright instead of turning them dark */
+
+[data-theme="light"] .bg-\[\#b9f54a\] {
+  background-color: #a8ef32 !important;
+}
+
+[data-theme="light"] .bg-\[\#b9f54a\].text-\[\#11150d\] {
+  color: #11150d !important;
+}
+
+/* Green translucent cards */
+
+[data-theme="light"] .bg-\[\#b9f54a\]\/\[\.04\],
+[data-theme="light"] .bg-\[\#b9f54a\]\/\[\.06\] {
+  background-color: rgba(82, 125, 8, 0.08) !important;
+}
+
+/* Amber/warning text needs stronger contrast too */
+
+[data-theme="light"] .text-amber-100,
+[data-theme="light"] .text-amber-200,
+[data-theme="light"] .text-amber-300 {
+  color: #805700 !important;
+}
+
+[data-theme="light"] .bg-amber-300\/\[\.04\],
+[data-theme="light"] .bg-amber-300\/\[\.05\],
+[data-theme="light"] .bg-amber-300\/\[\.06\] {
+  background-color: rgba(128, 87, 0, 0.07) !important;
 }
