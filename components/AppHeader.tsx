@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 
 import AppMenu from "@/components/AppMenu";
 import BrandLogo from "@/components/BrandLogo";
+import PendingSalesTestButton from "@/components/PendingSalesTestButton";
 
 import { getSupabase } from "@/lib/supabase";
 
@@ -77,19 +78,23 @@ export default function AppHeader({
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
           <BrandLogo />
 
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open navigation menu"
-            aria-expanded={menuOpen}
-            className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
-          >
-            <Menu size={19} />
+          <div className="flex items-center gap-2">
+            {currentPath === "/pending-sales" && <PendingSalesTestButton />}
 
-            <span className="hidden sm:inline">
-              Menu
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open navigation menu"
+              aria-expanded={menuOpen}
+              className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
+            >
+              <Menu size={19} />
+
+              <span className="hidden sm:inline">
+                Menu
+              </span>
+            </button>
+          </div>
         </div>
       </header>
 
