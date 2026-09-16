@@ -2,39 +2,297 @@
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
-:root {
+/* =========================================================
+   MTG DISPLAY CR
+   GLOBAL THEME SYSTEM
+   ========================================================= */
+
+/* DARK THEME — DEFAULT */
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
   --background: #0b0e0d;
   --foreground: #f4f3ed;
+
   --card: #151917;
   --card-foreground: #f4f3ed;
+
+  --surface: #101411;
+  --surface-secondary: #151917;
+  --surface-tertiary: #1c211e;
+
   --primary: #b9f54a;
   --primary-foreground: #10140d;
+
   --secondary: #1c211e;
   --secondary-foreground: #f4f3ed;
+
   --muted: #1c211e;
   --muted-foreground: #939a95;
+
   --accent: #b9f54a;
   --accent-foreground: #10140d;
+
   --border: #ffffff1a;
   --input: #ffffff20;
   --ring: #b9f54a;
-  --radius: .8rem;
+
+  --overlay: rgba(0, 0, 0, 0.72);
+
+  --text-primary: #f4f3ed;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.45);
+  --text-subtle: rgba(255, 255, 255, 0.30);
+
+  --success: #b9f54a;
+
+  --radius: 0.8rem;
 }
+
+
+/* =========================================================
+   LIGHT THEME
+   ========================================================= */
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --background: #f5f6f2;
+  --foreground: #151914;
+
+  --card: #ffffff;
+  --card-foreground: #151914;
+
+  --surface: #ffffff;
+  --surface-secondary: #f8f9f5;
+  --surface-tertiary: #eef0ea;
+
+  --primary: #9bd52f;
+  --primary-foreground: #11150d;
+
+  --secondary: #eef0ea;
+  --secondary-foreground: #151914;
+
+  --muted: #eef0ea;
+  --muted-foreground: #667066;
+
+  --accent: #9bd52f;
+  --accent-foreground: #11150d;
+
+  --border: #1720171f;
+  --input: #17201724;
+  --ring: #87c21d;
+
+  --overlay: rgba(15, 20, 15, 0.50);
+
+  --text-primary: #151914;
+  --text-secondary: rgba(21, 25, 20, 0.70);
+  --text-muted: rgba(21, 25, 20, 0.55);
+  --text-subtle: rgba(21, 25, 20, 0.40);
+
+  --success: #79ad19;
+}
+
+
+/* =========================================================
+   TAILWIND TOKENS
+   ========================================================= */
 
 @theme inline {
-  --color-background: var(--background); --color-foreground: var(--foreground);
-  --color-card: var(--card); --color-card-foreground: var(--card-foreground);
-  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
-  --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
-  --radius-lg: var(--radius); --font-sans: Arial, Helvetica, sans-serif; --font-serif: Georgia, "Times New Roman", serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
 }
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
-button, select { cursor: pointer; }
-button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid #b9f54a; outline-offset: 3px; }
-select { color-scheme: dark; }
+
+/* =========================================================
+   BASE
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--background);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+
+  background: var(--background);
+  color: var(--foreground);
+
+  font-family: Arial, Helvetica, sans-serif;
+
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+button,
+select {
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+select {
+  color-scheme: inherit;
+}
+
+
+/* =========================================================
+   GLOBAL APP COMPONENT HELPERS
+   ========================================================= */
+
+.app-background {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.app-surface {
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.app-card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border-color: var(--border);
+}
+
+.app-border {
+  border-color: var(--border);
+}
+
+.app-text {
+  color: var(--text-primary);
+}
+
+.app-text-secondary {
+  color: var(--text-secondary);
+}
+
+.app-text-muted {
+  color: var(--text-muted);
+}
+
+.app-text-subtle {
+  color: var(--text-subtle);
+}
+
+.app-input {
+  background: var(--surface-secondary);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.app-overlay {
+  background: var(--overlay);
+}
+
+
+/* =========================================================
+   TEMPORARY LEGACY COLOR BRIDGE
+
+   Some existing pages still contain hard-coded Tailwind
+   dark colors. These overrides allow the new Light theme
+   to work while those pages are migrated to global tokens.
+   ========================================================= */
+
+[data-theme="light"] .bg-\[\#0b0e0d\] {
+  background-color: var(--background) !important;
+}
+
+[data-theme="light"] .bg-\[\#101411\] {
+  background-color: var(--surface) !important;
+}
+
+[data-theme="light"] .text-\[\#f4f3ed\] {
+  color: var(--foreground) !important;
+}
+
+[data-theme="light"] .text-white\/30 {
+  color: var(--text-subtle) !important;
+}
+
+[data-theme="light"] .text-white\/35,
+[data-theme="light"] .text-white\/40,
+[data-theme="light"] .text-white\/45 {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="light"] .text-white\/50,
+[data-theme="light"] .text-white\/55,
+[data-theme="light"] .text-white\/60,
+[data-theme="light"] .text-white\/65 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .text-white {
+  color: var(--foreground) !important;
+}
+
+[data-theme="light"] .border-white\/10 {
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] .bg-white\/\[\.025\],
+[data-theme="light"] .bg-white\/\[\.035\],
+[data-theme="light"] .bg-white\/\[\.04\],
+[data-theme="light"] .bg-white\/\[\.05\],
+[data-theme="light"] .bg-white\/\[\.06\] {
+  background-color: var(--surface-secondary) !important;
+}
+
+[data-theme="light"] .bg-black\/15,
+[data-theme="light"] .bg-black\/20 {
+  background-color: var(--surface-secondary) !important;
+}
+
+[data-theme="light"] input {
+  color: var(--foreground);
+}
+
+[data-theme="light"] textarea {
+  color: var(--foreground);
+}
+
+[data-theme="light"] select {
+  color: var(--foreground);
+}

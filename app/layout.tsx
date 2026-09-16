@@ -2,11 +2,76 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MTG Display CR | Jean Carlos's Card Catalog",
-  description: "Magic: The Gathering cards available in Costa Rica, priced in colones with direct WhatsApp inquiries.",
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+  title: "MTG Display CR | Magic Card Marketplace Costa Rica",
+  description:
+    "Create, manage and share your Magic: The Gathering card catalog in Costa Rica.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body className="antialiased">{children}</body></html>;
+const themeScript = `
+(function () {
+  try {
+    var storedTheme = localStorage.getItem("mtg-display-cr-theme");
+    var theme =
+      storedTheme === "light" || storedTheme === "dark"
+        ? storedTheme
+        : "dark";
+
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  } catch (error) {
+    document.documentElement.dataset.theme = "dark";
+    document.documentElement.style.colorScheme = "dark";
+  }
+})();
+`;
+
+const languageScript = `
+(function () {
+  try {
+    var storedLanguage = localStorage.getItem(
+      "mtg-display-cr-language"
+    );
+
+    document.documentElement.lang =
+      storedLanguage === "en" ? "en" : "es";
+  } catch (error) {
+    document.documentElement.lang = "es";
+  }
+})();
+`;
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="es"
+      data-theme="dark"
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: themeScript,
+          }}
+        />
+
+        <script
+          dangerouslySetInnerHTML={{
+            __html: languageScript,
+          }}
+        />
+      </head>
+
+      <body className="antialiased">
+        {children}
+      </body>
+    </html>
+  );
 }
