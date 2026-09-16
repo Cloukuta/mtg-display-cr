@@ -13,7 +13,6 @@ PAGE_SIZE = 1000
 UPSERT_BATCH_SIZE = 500
 
 CK_CONDITION_FIELDS = {"NM": "nm_price", "EX": "ex_price", "VG": "vg_price", "G": "g_price"}
-FINISH_DIAGNOSTIC_NAMES = {"captain n'ghathrod"}
 
 
 def require_environment():
@@ -76,6 +75,16 @@ def fetch_cardkingdom_pricelist():
 
 
 def finish_for_product(product):
+    # CK does not expose a dedicated finish enum. Etched is encoded in the
+    # product variation/URL while is_foil remains true. Use those explicit CK
+    # signals before falling back to the ordinary foil/nonfoil flag.
+    variation = str(product.get("variation") or "").strip().lower()
+    url = str(product.get("url") or "").strip().lower()
+    sku = str(product.get("sku") or "").strip().upper()
+
+    if "foil etched" in variation or "foil-etched" in url or sku.startswith("DFE"):
+        return "etched"
+
     value = product.get("is_foil")
     return "foil" if value is True or value == 1 or str(value).strip().lower() in {"true","1","yes"} else "nonfoil"
 
@@ -118,37 +127,6 @@ def build_direct_prices(products, target_ids):
     return prices
 
 
-def print_finish_diagnostics(products, target_cards):
-    print("\nCARD KINGDOM FINISH DIAGNOSTICS")
-    print("================================")
-    wanted_ids = {
-        sid for sid, card in target_cards.items()
-        if normalize_name(card.get("name")) in {normalize_name(name) for name in FINISH_DIAGNOSTIC_NAMES}
-    }
-    found = 0
-    for product in products:
-        sid = str(product.get("scryfall_id") or "")
-        name = normalize_name(product_name(product))
-        if sid not in wanted_ids and name not in {normalize_name(value) for value in FINISH_DIAGNOSTIC_NAMES}:
-            continue
-        found += 1
-        print("\n------------------------------------------------------------")
-        print(f"Product name: {product_name(product)}")
-        print(f"Scryfall ID: {product.get('scryfall_id')}")
-        print(f"Current detected finish: {finish_for_product(product)}")
-        print(f"Condition prices: {condition_prices(product)}")
-        print("Raw CK product fields:")
-        for key in sorted(product.keys()):
-            value = product.get(key)
-            if isinstance(value, (dict, list)):
-                print(f"  {key}: {json.dumps(value, ensure_ascii=False, sort_keys=True)}")
-            else:
-                print(f"  {key}: {value}")
-    if not found:
-        print("No matching CK products found for finish diagnostic targets.")
-    print("\nEND CARD KINGDOM FINISH DIAGNOSTICS\n")
-
-
 def print_unresolved_diagnostics(products, target_cards, prices):
     missing = [card for sid, card in target_cards.items() if sid not in prices]
     print("\nCARD KINGDOM UNRESOLVED DIAGNOSTICS")
@@ -174,7 +152,7 @@ def print_unresolved_diagnostics(products, target_cards, prices):
             continue
         for index, product in enumerate(candidates[:12], 1):
             prices_for_product = condition_prices(product)
-            interesting = {key: product.get(key) for key in ("id","url","name","product_name","card_name","scryfall_id","is_foil","edition","set_name","set_code","collector_number") if product.get(key) is not None}
+            interesting = {key: product.get(key) for key in ("id","url","name","product_name","card_name","scryfall_id","is_foil","edition","variation","sku","set_name","set_code","collector_number") if product.get(key) is not None}
             print(f"  Candidate {index}: {interesting}")
             print(f"    finish={finish_for_product(product)} prices={prices_for_product}")
         if len(candidates) > 12: print(f"  ... {len(candidates)-12} additional candidate(s) omitted")
@@ -216,18 +194,24 @@ def sync(prices):
     timestamp=datetime.now(timezone.utc).replace(microsecond=0).isoformat(); print("Syncing Card Kingdom condition prices to Supabase...")
     rows=build_card_price_rows(prices,timestamp); condition_count=upsert_condition_prices(rows); normal_count,foil_count=patch_legacy_card_prices(prices,timestamp)
     counts={condition:0 for condition in CK_CONDITION_FIELDS}
-    for row in rows: counts[row["condition"]]+=1
+    finish_counts=defaultdict(int)
+    for row in rows:
+        counts[row["condition"]]+=1
+        finish_counts[row["finish"]]+=1
     print(f"Condition price rows upserted: {condition_count:,}")
     for condition in ("NM","EX","VG","G"): print(f"  {condition}: {counts[condition]:,}")
+    print("Finish price rows:")
+    for finish in ("nonfoil","foil","etched","surgefoil"):
+        print(f"  {finish}: {finish_counts.get(finish, 0):,}")
     print(f"Legacy CK normal NM prices updated: {normal_count:,}"); print(f"Legacy CK foil NM prices updated:   {foil_count:,}")
-    print("Etched and surgefoil remain unchanged until CK exposes a reliable finish signal.")
+    print("Card Kingdom etched prices are synchronized when CK explicitly identifies Foil Etched. Surgefoil remains unchanged until CK exposes a reliable signal.")
 
 
 def print_validation(prices):
     sid="09ecd919-6f99-47fd-8242-b0b062e98b45"
     if sid not in prices: print("Validation case The Irencrag: no direct CK match"); return
     print("Validation case: The Irencrag"); print(f"  Scryfall ID: {sid}")
-    for finish in ("nonfoil","foil"):
+    for finish in ("nonfoil","foil","etched"):
         values=prices[sid].get(finish,{}); print(f"  {finish}:")
         for condition in ("NM","EX","VG","G"): print(f"    {condition}: {values.get(condition)}")
 
@@ -235,8 +219,7 @@ def print_validation(prices):
 def main():
     require_environment(); target_cards=fetch_target_cards(); target_ids=set(target_cards)
     if not target_ids: print("No cards exist in public.cards. Nothing to update."); return
-    products=fetch_cardkingdom_pricelist(); prices=build_direct_prices(products,target_ids)
-    print_validation(prices); print_finish_diagnostics(products,target_cards); print_unresolved_diagnostics(products,target_cards,prices); sync(prices)
+    products=fetch_cardkingdom_pricelist(); prices=build_direct_prices(products,target_ids); print_validation(prices); print_unresolved_diagnostics(products,target_cards,prices); sync(prices)
     missing=len(target_ids-set(prices)); print(f"Catalog printings without a direct CK match: {missing:,}"); print("Direct Card Kingdom condition-price synchronization completed successfully.")
 
 
