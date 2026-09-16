@@ -19,6 +19,7 @@ import {
   type Language,
 } from "@/lib/i18n";
 import LanguageSwitch from "@/components/LanguageSwitch";
+import AppHeader from "@/components/AppHeader";
 
 type PricingSettings = {
   usd_to_crc: number;
@@ -235,7 +236,7 @@ export default function PricingSettingsPage() {
 
   return (
     <main className="min-h-screen bg-[#0b0e0d] text-[#f4f3ed]">
-      <header className="border-b border-white/10">
+      <AppHeader currentPath="/settings/pricing" />
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
           <a href="/dashboard" className="font-semibold">
             MTG Display CR
