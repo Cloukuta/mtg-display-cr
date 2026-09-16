@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
 
 import AppMenu from "@/components/AppMenu";
+import BrandLogo from "@/components/BrandLogo";
+
 import { getSupabase } from "@/lib/supabase";
 
 type SellerProfile = {
@@ -73,24 +75,7 @@ export default function AppHeader({
     <>
       <header className="border-b border-border bg-background/95 text-foreground backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
-          <a
-            href="/dashboard"
-            className="flex items-center gap-3"
-          >
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary font-serif font-bold text-primary-foreground">
-              M
-            </div>
-
-            <div className="leading-tight">
-              <p className="text-[10px] font-bold uppercase tracking-[.16em] text-primary">
-                MTG
-              </p>
-
-              <strong className="font-serif">
-                Display CR
-              </strong>
-            </div>
-          </a>
+          <BrandLogo />
 
           <button
             type="button"

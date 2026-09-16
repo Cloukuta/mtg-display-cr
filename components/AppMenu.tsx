@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useState } from "react";
 import {
   BarChart3,
@@ -187,15 +188,7 @@ export default function AppMenu({
         className="app-surface absolute right-0 top-0 flex h-full w-[min(90vw,390px)] flex-col overflow-y-auto border-l border-border shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-5">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.16em] text-primary">
-              MTG
-            </p>
-
-            <strong className="font-serif text-xl">
-              Display CR
-            </strong>
-          </div>
+          <BrandLogo />
 
           <button
             type="button"
