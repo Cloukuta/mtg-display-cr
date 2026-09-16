@@ -13,6 +13,7 @@ PAGE_SIZE = 1000
 UPSERT_BATCH_SIZE = 500
 
 CK_CONDITION_FIELDS = {"NM": "nm_price", "EX": "ex_price", "VG": "vg_price", "G": "g_price"}
+FINISH_DIAGNOSTIC_NAMES = {"captain n'ghathrod"}
 
 
 def require_environment():
@@ -117,6 +118,37 @@ def build_direct_prices(products, target_ids):
     return prices
 
 
+def print_finish_diagnostics(products, target_cards):
+    print("\nCARD KINGDOM FINISH DIAGNOSTICS")
+    print("================================")
+    wanted_ids = {
+        sid for sid, card in target_cards.items()
+        if normalize_name(card.get("name")) in {normalize_name(name) for name in FINISH_DIAGNOSTIC_NAMES}
+    }
+    found = 0
+    for product in products:
+        sid = str(product.get("scryfall_id") or "")
+        name = normalize_name(product_name(product))
+        if sid not in wanted_ids and name not in {normalize_name(value) for value in FINISH_DIAGNOSTIC_NAMES}:
+            continue
+        found += 1
+        print("\n------------------------------------------------------------")
+        print(f"Product name: {product_name(product)}")
+        print(f"Scryfall ID: {product.get('scryfall_id')}")
+        print(f"Current detected finish: {finish_for_product(product)}")
+        print(f"Condition prices: {condition_prices(product)}")
+        print("Raw CK product fields:")
+        for key in sorted(product.keys()):
+            value = product.get(key)
+            if isinstance(value, (dict, list)):
+                print(f"  {key}: {json.dumps(value, ensure_ascii=False, sort_keys=True)}")
+            else:
+                print(f"  {key}: {value}")
+    if not found:
+        print("No matching CK products found for finish diagnostic targets.")
+    print("\nEND CARD KINGDOM FINISH DIAGNOSTICS\n")
+
+
 def print_unresolved_diagnostics(products, target_cards, prices):
     missing = [card for sid, card in target_cards.items() if sid not in prices]
     print("\nCARD KINGDOM UNRESOLVED DIAGNOSTICS")
@@ -203,7 +235,8 @@ def print_validation(prices):
 def main():
     require_environment(); target_cards=fetch_target_cards(); target_ids=set(target_cards)
     if not target_ids: print("No cards exist in public.cards. Nothing to update."); return
-    products=fetch_cardkingdom_pricelist(); prices=build_direct_prices(products,target_ids); print_validation(prices); print_unresolved_diagnostics(products,target_cards,prices); sync(prices)
+    products=fetch_cardkingdom_pricelist(); prices=build_direct_prices(products,target_ids)
+    print_validation(prices); print_finish_diagnostics(products,target_cards); print_unresolved_diagnostics(products,target_cards,prices); sync(prices)
     missing=len(target_ids-set(prices)); print(f"Catalog printings without a direct CK match: {missing:,}"); print("Direct Card Kingdom condition-price synchronization completed successfully.")
 
 
