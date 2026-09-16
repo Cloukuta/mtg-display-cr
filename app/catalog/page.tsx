@@ -10,7 +10,14 @@ import {
   Square,
   Store,
 } from "lucide-react";
+import AppHeader from "@/components/AppHeader";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  DEFAULT_LANGUAGE,
+  LANGUAGE_STORAGE_KEY,
+  getTranslation,
+  type Language,
+} from "@/lib/i18n";
 
 type PricingMode = "default" | "custom" | "discount";
 type FilterMode = "all" | PricingMode;
@@ -86,6 +93,31 @@ export default function CatalogPage() {
   const [selected, setSelected] = useState<number[]>([]);
   const [notice, setNotice] = useState("");
   const [working, setWorking] = useState(false);
+  const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
+
+  const t = getTranslation(language);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+
+    if (stored === "es" || stored === "en") {
+      setLanguage(stored);
+    }
+
+    function handleLanguageChange(event: Event) {
+      const customEvent = event as CustomEvent<Language>;
+
+      if (customEvent.detail === "es" || customEvent.detail === "en") {
+        setLanguage(customEvent.detail);
+      }
+    }
+
+    window.addEventListener("mtg-language-change", handleLanguageChange);
+
+    return () => {
+      window.removeEventListener("mtg-language-change", handleLanguageChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (!supabase) {
@@ -271,8 +303,19 @@ export default function CatalogPage() {
     );
 
     setSelected([]);
+    const modeLabel =
+      mode === "default"
+        ? t.catalog.default
+        : mode === "custom"
+        ? t.catalog.custom
+        : t.catalog.discount;
+
     setNotice(
-      `${ids.length} listing${ids.length === 1 ? "" : "s"} moved to ${mode}.`
+      `${ids.length} ${
+        ids.length === 1
+          ? t.catalog.listingMoved
+          : t.catalog.listingsMoved
+      } ${modeLabel}.`
     );
     setWorking(false);
   }
@@ -303,26 +346,26 @@ export default function CatalogPage() {
 
   if (loading) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#0b0e0d] text-white/60">
-        Loading catalog…
+      <main className="grid min-h-screen place-items-center bg-background text-muted-foreground">
+        {t.catalog.loading}
       </main>
     );
   }
 
   if (!configured) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#0b0e0d] p-5 text-[#f4f3ed]">
+      <main className="grid min-h-screen place-items-center bg-background p-5 text-foreground">
         <section className="max-w-lg rounded-3xl border border-amber-400/25 bg-amber-300/[.06] p-7">
           <AlertCircle className="mb-4 text-amber-300" />
           <h1 className="font-serif text-3xl">
-            Supabase connection required
+            {t.catalog.supabaseRequired}
           </h1>
           <a
             href="/dashboard"
             className="mt-6 inline-flex items-center gap-2 text-[#b9f54a]"
           >
             <ArrowLeft size={16} />
-            Back to Dashboard
+            {t.catalog.backToDashboard}
           </a>
         </section>
       </main>
@@ -331,20 +374,20 @@ export default function CatalogPage() {
 
   if (!user) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#0b0e0d] p-5 text-[#f4f3ed]">
+      <main className="grid min-h-screen place-items-center bg-background p-5 text-foreground">
         <section className="text-center">
           <Store className="mx-auto text-[#b9f54a]" size={40} />
           <h1 className="mt-4 font-serif text-3xl">
-            Seller catalog
+            {t.catalog.sellerCatalog}
           </h1>
           <p className="mt-2 text-white/50">
-            Sign in from your dashboard to manage your catalog.
+            {t.catalog.signInDescription}
           </p>
           <a
             href="/dashboard"
             className="mt-6 inline-flex rounded-xl bg-[#b9f54a] px-5 py-3 font-bold text-[#11150d]"
           >
-            Go to Dashboard
+            {t.catalog.goToDashboard}
           </a>
         </section>
       </main>
@@ -352,49 +395,35 @@ export default function CatalogPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0b0e0d] text-[#f4f3ed]">
-      <header className="border-b border-white/10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
-          <a href="/dashboard" className="font-semibold">
-            MTG Display CR
-          </a>
-
-          <a
-            href="/dashboard"
-            className="flex items-center gap-2 text-sm text-white/55 transition hover:text-white"
-          >
-            <ArrowLeft size={16} />
-            Back to Dashboard
-          </a>
-        </div>
-      </header>
+    <main className="min-h-screen bg-background text-foreground">
+      <AppHeader currentPath="/catalog" />
 
       <div className="mx-auto max-w-7xl px-5 py-8">
         <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
             <p className="text-xs font-bold uppercase tracking-[.15em] text-[#b9f54a]">
-              Seller inventory
+              {t.catalog.eyebrow}
             </p>
 
             <h1 className="mt-2 font-serif text-4xl">
-              Your Catalog
+              {t.catalog.title}
             </h1>
 
             <p className="mt-2 text-white/45">
-              {inventory.length} listings in your private catalog
+              {inventory.length} {t.catalog.privateCatalog}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3 text-sm">
             <div className="rounded-xl border border-white/10 bg-white/[.035] px-4 py-3">
-              <span className="text-white/40">USD → CRC</span>
+              <span className="text-white/40">{t.catalog.usdToCrc}</span>
               <strong className="ml-2">
                 ₡{settings.usd_to_crc}
               </strong>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-white/[.035] px-4 py-3">
-              <span className="text-white/40">Discount</span>
+              <span className="text-white/40">{t.catalog.discountSetting}</span>
               <strong className="ml-2">
                 {settings.discount_percent}%
               </strong>
@@ -413,10 +442,10 @@ export default function CatalogPage() {
             <div className="flex flex-wrap gap-2">
               {(
                 [
-                  ["all", "All"],
-                  ["default", "Default"],
-                  ["custom", "Custom ⚠"],
-                  ["discount", "Discount"],
+                  ["all", t.catalog.all],
+                  ["default", t.catalog.default],
+                  ["custom", t.catalog.custom],
+                  ["discount", t.catalog.discount],
                 ] as const
               ).map(([value, label]) => (
                 <button
@@ -441,7 +470,7 @@ export default function CatalogPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search cards..."
+                placeholder={t.catalog.search}
                 className="h-11 w-full rounded-xl border border-white/10 bg-black/20 pl-10 pr-4 text-sm outline-none focus:border-[#b9f54a]"
               />
             </div>
@@ -460,11 +489,11 @@ export default function CatalogPage() {
               ) : (
                 <Square size={18} />
               )}
-              Select visible
+              {t.catalog.selectVisible}
             </button>
 
             <span className="text-sm text-white/40">
-              {filteredInventory.length} shown
+              {filteredInventory.length} {t.catalog.shown}
             </span>
           </div>
         </section>
@@ -473,9 +502,9 @@ export default function CatalogPage() {
           <section className="sticky top-4 z-20 mt-5 rounded-2xl border border-[#b9f54a]/30 bg-[#151a12] p-4 shadow-2xl">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <strong>{selected.length} selected</strong>
+                <strong>{selected.length} {t.catalog.selected}</strong>
                 <span className="ml-3 text-sm text-white/45">
-                  Current value: {crc.format(selectedValue)}
+                  {t.catalog.currentValue}: {crc.format(selectedValue)}
                 </span>
               </div>
 
@@ -487,7 +516,7 @@ export default function CatalogPage() {
                   }
                   className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/[.05] disabled:opacity-40"
                 >
-                  Set Default
+                  {t.catalog.setDefault}
                 </button>
 
                 <button
@@ -497,7 +526,7 @@ export default function CatalogPage() {
                   }
                   className="rounded-xl border border-amber-400/25 bg-amber-300/[.06] px-4 py-2 text-sm font-semibold text-amber-200 disabled:opacity-40"
                 >
-                  Set Custom ⚠
+                  {t.catalog.setCustom}
                 </button>
 
                 <button
@@ -507,7 +536,7 @@ export default function CatalogPage() {
                   }
                   className="rounded-xl bg-[#b9f54a] px-4 py-2 text-sm font-bold text-[#11150d] disabled:opacity-40"
                 >
-                  Set Discount
+                  {t.catalog.setDiscount}
                 </button>
               </div>
             </div>
@@ -519,7 +548,7 @@ export default function CatalogPage() {
             <div className="p-12 text-center">
               <Store className="mx-auto text-white/20" size={38} />
               <p className="mt-4 text-white/50">
-                No listings found.
+                {t.catalog.noListings}
               </p>
             </div>
           ) : (
@@ -559,14 +588,14 @@ export default function CatalogPage() {
                         />
                       ) : (
                         <div className="grid h-full place-items-center text-[10px] text-white/25">
-                          No image
+                          {t.catalog.noImage}
                         </div>
                       )}
                     </div>
 
                     <div className="min-w-0">
                       <h2 className="truncate font-semibold">
-                        {card?.name || "Unknown card"}
+                        {card?.name || t.catalog.unknownCard}
                       </h2>
 
                       <p className="mt-1 text-sm text-white/40">
@@ -577,7 +606,7 @@ export default function CatalogPage() {
 
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
                         <span className="rounded-lg bg-white/[.05] px-2 py-1 text-white/45">
-                          Qty {item.quantity}
+                          {t.catalog.qty} {item.quantity}
                         </span>
 
                         <span
@@ -590,10 +619,10 @@ export default function CatalogPage() {
                           }`}
                         >
                           {item.pricing_mode === "custom"
-                            ? "Custom ⚠"
+                            ? t.catalog.custom
                             : item.pricing_mode === "discount"
-                            ? `Discount ${settings.discount_percent}%`
-                            : "Default"}
+                            ? `${t.catalog.discount} ${settings.discount_percent}%`
+                            : t.catalog.default}
                         </span>
 
                         <span
@@ -603,14 +632,14 @@ export default function CatalogPage() {
                               : "bg-white/[.05] text-white/35"
                           }`}
                         >
-                          {item.available ? "Available" : "Hidden"}
+                          {item.available ? t.catalog.available : t.catalog.hidden}
                         </span>
                       </div>
                     </div>
 
                     <div className="min-w-48 md:text-right">
                       <p className="text-xs uppercase tracking-wide text-white/35">
-                        Card Kingdom
+                        {t.catalog.cardKingdom}
                       </p>
 
                       <p className="mt-1 text-sm text-white/60">
@@ -618,11 +647,11 @@ export default function CatalogPage() {
                           ? `$${Number(
                               card.cardkingdom_price_usd
                             ).toFixed(2)} USD`
-                          : "Pending"}
+                          : t.catalog.pending}
                       </p>
 
                       <p className="mt-3 text-xs uppercase tracking-wide text-white/35">
-                        Sale price
+                        {t.catalog.salePrice}
                       </p>
 
                       {item.pricing_mode === "custom" ? (
@@ -658,13 +687,13 @@ export default function CatalogPage() {
                         </div>
                       ) : (
                         <p className="mt-1 text-lg font-bold text-[#b9f54a]">
-                          {price == null ? "Pending" : crc.format(price)}
+                          {price == null ? t.catalog.pending : crc.format(price)}
                         </p>
                       )}
 
                       {item.pricing_mode === "custom" && (
                         <p className="mt-2 max-w-52 text-xs leading-relaxed text-amber-200/55">
-                          ⚠ Custom prices do not update automatically.
+                          {t.catalog.customWarning}
                         </p>
                       )}
                     </div>
