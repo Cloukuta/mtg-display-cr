@@ -86,30 +86,58 @@ export const translations = {
     },
 
     catalog: {
-      eyebrow: "Inventario del vendedor",
-      title: "Tu catálogo",
-      privateCatalog: "listados en tu catálogo privado",
-      all: "Todos",
-      default: "Predeterminado",
-      custom: "Personalizado ⚠",
-      discount: "Descuento",
-      search: "Buscar cartas...",
-      selectVisible: "Seleccionar visibles",
-      shown: "mostradas",
-      selected: "seleccionadas",
-      currentValue: "Valor actual",
-      setDefault: "Asignar Predeterminado",
-      setCustom: "Asignar Personalizado ⚠",
-      setDiscount: "Asignar Descuento",
-      quantity: "Cant.",
-      available: "Disponible",
-      hidden: "Oculta",
-      salePrice: "Precio de venta",
-      pending: "Pendiente",
-      noListings: "No se encontraron cartas.",
-      customWarning:
-        "⚠ Los precios personalizados no se actualizan automáticamente.",
-    },
+  eyebrow: "Inventario del vendedor",
+  title: "Tu catálogo",
+  privateCatalog: "listados en tu catálogo privado",
+
+  all: "Todos",
+  default: "Predeterminado",
+  custom: "Personalizado ⚠",
+  discount: "Descuento",
+
+  search: "Buscar cartas...",
+  selectVisible: "Seleccionar visibles",
+  shown: "mostradas",
+  selected: "seleccionadas",
+  currentValue: "Valor actual",
+
+  setDefault: "Asignar Predeterminado",
+  setCustom: "Asignar Personalizado ⚠",
+  setDiscount: "Asignar Descuento",
+
+  quantity: "Cant.",
+  available: "Disponible",
+  hidden: "Oculta",
+
+  cardKingdom: "Card Kingdom",
+  salePrice: "Precio de venta",
+  pending: "Pendiente",
+
+  noListings: "No se encontraron cartas.",
+  noImage: "Sin imagen",
+  unknownCard: "Carta desconocida",
+
+  customWarning:
+    "⚠ Los precios personalizados no se actualizan automáticamente.",
+
+  usdToCrc: "USD → CRC",
+  discountSetting: "Descuento",
+
+  loading: "Cargando catálogo…",
+
+  supabaseRequired: "Se requiere conexión con Supabase",
+  backToDashboard: "Volver al panel",
+
+  sellerCatalog: "Catálogo del vendedor",
+  signInDescription:
+    "Inicia sesión desde tu panel para administrar tu catálogo.",
+  goToDashboard: "Ir al panel",
+
+  listingMoved: "listado movido a",
+  listingsMoved: "listados movidos a",
+
+  qty: "Cant.",
+},
   },
 
   en: {
@@ -194,30 +222,58 @@ export const translations = {
     },
 
     catalog: {
-      eyebrow: "Seller inventory",
-      title: "Your Catalog",
-      privateCatalog: "listings in your private catalog",
-      all: "All",
-      default: "Default",
-      custom: "Custom ⚠",
-      discount: "Discount",
-      search: "Search cards...",
-      selectVisible: "Select visible",
-      shown: "shown",
-      selected: "selected",
-      currentValue: "Current value",
-      setDefault: "Set Default",
-      setCustom: "Set Custom ⚠",
-      setDiscount: "Set Discount",
-      quantity: "Qty",
-      available: "Available",
-      hidden: "Hidden",
-      salePrice: "Sale price",
-      pending: "Pending",
-      noListings: "No listings found.",
-      customWarning:
-        "⚠ Custom prices do not update automatically.",
-    },
+  eyebrow: "Seller inventory",
+  title: "Your Catalog",
+  privateCatalog: "listings in your private catalog",
+
+  all: "All",
+  default: "Default",
+  custom: "Custom ⚠",
+  discount: "Discount",
+
+  search: "Search cards...",
+  selectVisible: "Select visible",
+  shown: "shown",
+  selected: "selected",
+  currentValue: "Current value",
+
+  setDefault: "Set Default",
+  setCustom: "Set Custom ⚠",
+  setDiscount: "Set Discount",
+
+  quantity: "Qty",
+  available: "Available",
+  hidden: "Hidden",
+
+  cardKingdom: "Card Kingdom",
+  salePrice: "Sale price",
+  pending: "Pending",
+
+  noListings: "No listings found.",
+  noImage: "No image",
+  unknownCard: "Unknown card",
+
+  customWarning:
+    "⚠ Custom prices do not update automatically.",
+
+  usdToCrc: "USD → CRC",
+  discountSetting: "Discount",
+
+  loading: "Loading catalog…",
+
+  supabaseRequired: "Supabase connection required",
+  backToDashboard: "Back to Dashboard",
+
+  sellerCatalog: "Seller catalog",
+  signInDescription:
+    "Sign in from your dashboard to manage your catalog.",
+  goToDashboard: "Go to Dashboard",
+
+  listingMoved: "listing moved to",
+  listingsMoved: "listings moved to",
+
+  qty: "Qty",
+},
   },
 } as const;
 
