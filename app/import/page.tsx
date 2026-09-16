@@ -24,6 +24,8 @@ import {
   type ResolvedCard,
 } from "@/lib/moxfield";
 
+type ImportPricingMode = "default" | "discount";
+
 export default function ImportPage() {
   const configured = isSupabaseConfigured();
   const supabase = getSupabase();
@@ -34,6 +36,8 @@ export default function ImportPage() {
   const [progress, setProgress] = useState(0);
   const [strategy, setStrategy] =
     useState<"sum" | "replace" | "skip">("sum");
+  const [pricingMode, setPricingMode] =
+    useState<ImportPricingMode>("default");
   const [notice, setNotice] = useState("");
   const [working, setWorking] = useState(false);
   const [language, setLanguage] =
@@ -67,6 +71,17 @@ export default function ImportPage() {
           addQuantities: "Sumar cantidades",
           replaceQuantities: "Reemplazar cantidades",
           skipDuplicates: "Omitir duplicados",
+          pricingTitle: "Precio inicial de las cartas importadas",
+          pricingHelp:
+            "Elige cómo se venderá este lote. Los precios personalizados se administran después desde Mi catálogo.",
+          defaultPricing: "Predeterminado",
+          defaultPricingHelp:
+            "Usa el precio de Card Kingdom correspondiente al acabado y condición de cada carta.",
+          discountPricing: "Descuento",
+          discountPricingHelp:
+            "Usa el precio de Card Kingdom y aplica el porcentaje de descuento configurado por el vendedor.",
+          customLater:
+            "El precio Personalizado se puede asignar individualmente o en lote desde Mi catálogo.",
           importCards: "Importar",
           cards: "cartas",
           loading: "Cargando importador…",
@@ -112,6 +127,17 @@ export default function ImportPage() {
           addQuantities: "Add quantities",
           replaceQuantities: "Replace quantities",
           skipDuplicates: "Skip duplicates",
+          pricingTitle: "Initial pricing for imported cards",
+          pricingHelp:
+            "Choose how this batch will be sold. Custom prices are managed later from My Catalog.",
+          defaultPricing: "Default",
+          defaultPricingHelp:
+            "Uses the Card Kingdom price matching each card's finish and condition.",
+          discountPricing: "Discount",
+          discountPricingHelp:
+            "Uses the Card Kingdom price and applies the seller's configured discount percentage.",
+          customLater:
+            "Custom pricing can be assigned individually or in bulk from My Catalog.",
           importCards: "Import",
           cards: "cards",
           loading: "Loading importer…",
@@ -272,6 +298,8 @@ export default function ImportPage() {
             ...key,
             quantity,
             available: true,
+            pricing_mode: pricingMode,
+            custom_price_crc: null,
             updated_at: new Date().toISOString(),
           },
           {
@@ -417,8 +445,7 @@ export default function ImportPage() {
               accept=".csv,text/csv"
               className="sr-only"
               onChange={(e) =>
-                e.target.files?.[0] &&
-                void readFile(e.target.files[0])
+                e.target.files?.[0] && void readFile(e.target.files[0])
               }
             />
           </label>
@@ -428,15 +455,9 @@ export default function ImportPage() {
               <div className="h-2 overflow-hidden rounded-full bg-secondary">
                 <div
                   className="h-full bg-primary"
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      (progress / Math.max(1, progress)) * 100
-                    )}%`,
-                  }}
+                  style={{ width: "100%" }}
                 />
               </div>
-
               <p className="mt-2 text-xs text-muted-foreground">
                 {progress} {text.rowsValidated}
               </p>
@@ -446,25 +467,14 @@ export default function ImportPage() {
           {notice && (
             <div className="mt-5 flex items-start gap-2 rounded-xl border border-border bg-secondary/40 p-3 text-sm text-muted-foreground">
               {notice === text.complete ? (
-                <CheckCircle2
-                  size={17}
-                  className="mt-0.5 shrink-0 text-primary"
-                />
+                <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-primary" />
               ) : (
-                <AlertCircle
-                  size={17}
-                  className="mt-0.5 shrink-0 text-amber-500"
-                />
+                <AlertCircle size={17} className="mt-0.5 shrink-0 text-amber-500" />
               )}
-
               <div className="flex-1">
                 <p>{notice}</p>
-
                 {notice === text.complete && (
-                  <a
-                    href="/catalog"
-                    className="mt-2 inline-flex font-semibold text-primary"
-                  >
+                  <a href="/catalog" className="mt-2 inline-flex font-semibold text-primary">
                     {text.openCatalog} →
                   </a>
                 )}
@@ -478,7 +488,6 @@ export default function ImportPage() {
                 <span className="font-semibold text-primary">
                   {resolved.length} {text.resolved}
                 </span>
-
                 <span className="font-semibold text-amber-500">
                   {unresolved.length} {text.needReview}
                 </span>
@@ -489,11 +498,8 @@ export default function ImportPage() {
                   <div className="border-b border-amber-400/20 px-4 py-3">
                     <div className="flex items-center gap-2 text-amber-500">
                       <AlertCircle size={18} />
-                      <span className="font-semibold">
-                        {text.cardsReview}
-                      </span>
+                      <span className="font-semibold">{text.cardsReview}</span>
                     </div>
-
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                       {text.reviewHelp}
                     </p>
@@ -510,48 +516,20 @@ export default function ImportPage() {
                             <p className="font-semibold text-foreground">
                               {row.name || text.unknownCard}
                             </p>
-
                             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              <span>
-                                {text.csvRow} {row.rowNumber}
-                              </span>
-
-                              {row.setCode && (
-                                <span>
-                                  {text.set}: {row.setCode.toUpperCase()}
-                                </span>
-                              )}
-
-                              {row.collectorNumber && (
-                                <span>
-                                  {text.collector}: #{row.collectorNumber}
-                                </span>
-                              )}
-
-                              {row.language && (
-                                <span>
-                                  {text.cardLanguage}: {row.language}
-                                </span>
-                              )}
-
-                              {row.finish && (
-                                <span>
-                                  {text.finish}: {row.finish}
-                                </span>
-                              )}
+                              <span>{text.csvRow} {row.rowNumber}</span>
+                              {row.setCode && <span>{text.set}: {row.setCode.toUpperCase()}</span>}
+                              {row.collectorNumber && <span>{text.collector}: #{row.collectorNumber}</span>}
+                              {row.language && <span>{text.cardLanguage}: {row.language}</span>}
+                              {row.finish && <span>{text.finish}: {row.finish}</span>}
                             </div>
                           </div>
-
                           <span className="shrink-0 rounded-full border border-amber-400/25 bg-amber-300/10 px-2.5 py-1 text-[11px] font-semibold text-amber-500">
                             {text.review}
                           </span>
                         </div>
-
                         <div className="mt-3 rounded-xl bg-secondary/50 px-3 py-2">
-                          <p className="text-xs text-muted-foreground">
-                            {text.reason}
-                          </p>
-
+                          <p className="text-xs text-muted-foreground">{text.reason}</p>
                           <p className="mt-0.5 text-sm text-amber-600">
                             {row.error || text.validationFailed}
                           </p>
@@ -562,20 +540,64 @@ export default function ImportPage() {
                 </div>
               )}
 
+              <div className="mt-5">
+                <p className="text-sm font-semibold text-foreground">{text.pricingTitle}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {text.pricingHelp}
+                </p>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setPricingMode("default")}
+                    aria-pressed={pricingMode === "default"}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      pricingMode === "default"
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-secondary/40 hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`h-3 w-3 rounded-full border ${pricingMode === "default" ? "border-primary bg-primary" : "border-muted-foreground"}`} />
+                      <span className="font-semibold text-foreground">{text.defaultPricing}</span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      {text.defaultPricingHelp}
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPricingMode("discount")}
+                    aria-pressed={pricingMode === "discount"}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      pricingMode === "discount"
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-secondary/40 hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`h-3 w-3 rounded-full border ${pricingMode === "discount" ? "border-primary bg-primary" : "border-muted-foreground"}`} />
+                      <span className="font-semibold text-foreground">{text.discountPricing}</span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      {text.discountPricingHelp}
+                    </p>
+                  </button>
+                </div>
+
+                <p className="mt-3 text-xs text-muted-foreground">{text.customLater}</p>
+              </div>
+
               <label className="mt-5 grid gap-1.5 text-sm text-muted-foreground">
                 {text.duplicates}
-
                 <select
                   value={strategy}
-                  onChange={(e) =>
-                    setStrategy(e.target.value as typeof strategy)
-                  }
+                  onChange={(e) => setStrategy(e.target.value as typeof strategy)}
                   className="h-11 rounded-xl border border-border bg-secondary px-3 text-foreground"
                 >
                   <option value="sum">{text.addQuantities}</option>
-                  <option value="replace">
-                    {text.replaceQuantities}
-                  </option>
+                  <option value="replace">{text.replaceQuantities}</option>
                   <option value="skip">{text.skipDuplicates}</option>
                 </select>
               </label>
