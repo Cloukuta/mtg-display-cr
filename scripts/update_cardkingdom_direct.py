@@ -8,7 +8,14 @@ CK_PRICELIST_URL = "https://api.cardkingdom.com/api/v2/pricelist"
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 PAGE_SIZE = 1000
-PATCH_BATCH_SIZE = 200
+UPSERT_BATCH_SIZE = 500
+
+CK_CONDITION_FIELDS = {
+    "NM": "nm_price",
+    "EX": "ex_price",
+    "VG": "vg_price",
+    "G": "g_price",
+}
 
 
 def require_environment():
@@ -101,44 +108,57 @@ def fetch_cardkingdom_pricelist():
 
 
 def finish_for_product(product):
-    # The public CK feed exposes is_foil. Treat non-foil and foil explicitly.
-    # Etched remains untouched until CK exposes an unambiguous finish signal.
+    # CK currently gives us a reliable foil boolean. Keep etched/surgefoil out
+    # of this mapping until the feed exposes an unambiguous finish signal.
     value = product.get("is_foil")
     if value is True or value == 1 or str(value).strip().lower() in {"true", "1", "yes"}:
         return "foil"
-    return "normal"
+    return "nonfoil"
 
 
-def retail_price(product):
-    # Prefer the headline retail price. NM is retained as a fallback because
-    # the v2 feed can expose condition-specific retail fields.
-    price = as_price(product.get("price_retail"))
-    if price is not None:
-        return price
-    conditions = product.get("condition_values") or {}
-    return as_price(conditions.get("nm_price"))
+def condition_prices(product):
+    values = product.get("condition_values") or {}
+    result = {}
+
+    for condition, field in CK_CONDITION_FIELDS.items():
+        price = as_price(values.get(field))
+        if price is not None:
+            result[condition] = price
+
+    # Some CK products expose only the headline retail value. It represents
+    # the normal retail reference and is safe as an NM fallback only.
+    if "NM" not in result:
+        retail = as_price(product.get("price_retail"))
+        if retail is not None:
+            result["NM"] = retail
+
+    return result
 
 
 def build_direct_prices(products, target_ids):
     prices = {}
     matched_products = 0
+
     for product in products:
         scryfall_id = product.get("scryfall_id")
         if not scryfall_id or str(scryfall_id) not in target_ids:
             continue
-        price = retail_price(product)
-        if price is None:
+
+        product_prices = condition_prices(product)
+        if not product_prices:
             continue
+
         matched_products += 1
         sid = str(scryfall_id)
         finish = finish_for_product(product)
-        row = prices.setdefault(sid, {"normal": None, "foil": None})
-        # Multiple CK products can map to one Scryfall printing. Keep the
-        # lowest current retail listing for the same finish rather than mixing
-        # editions; the Scryfall ID already guarantees the exact printing.
-        current = row[finish]
-        if current is None or price < current:
-            row[finish] = price
+        finish_prices = prices.setdefault(sid, {}).setdefault(finish, {})
+
+        # Multiple CK products may map to the same exact Scryfall printing.
+        # Keep the lowest current retail value for the same finish/condition.
+        for condition, price in product_prices.items():
+            current = finish_prices.get(condition)
+            if current is None or price < current:
+                finish_prices[condition] = price
 
     print(f"CK products matching our catalog: {matched_products:,}")
     print(f"Scryfall printings with direct CK price: {len(prices):,}")
@@ -151,35 +171,87 @@ def chunked(values, size):
         yield values[start : start + size]
 
 
-def patch_finish(ids, column, price_map, timestamp):
-    updated = 0
-    # PostgREST cannot assign a different value to each row in one PATCH, so
-    # updates remain row-specific. This is still scalable because the CK feed
-    # is downloaded once and matching is O(products + catalog), not per card.
-    for sid in ids:
-        value = price_map[sid]
+def patch_legacy_card_prices(prices, timestamp):
+    normal_count = 0
+    foil_count = 0
+
+    for sid, finishes in prices.items():
+        payload = {"cardkingdom_price_updated_at": timestamp}
+        nonfoil_nm = finishes.get("nonfoil", {}).get("NM")
+        foil_nm = finishes.get("foil", {}).get("NM")
+
+        if nonfoil_nm is not None:
+            payload["cardkingdom_normal_usd"] = nonfoil_nm
+            normal_count += 1
+        if foil_nm is not None:
+            payload["cardkingdom_foil_usd"] = foil_nm
+            foil_count += 1
+
+        if len(payload) == 1:
+            continue
+
         encoded = urllib.parse.quote(sid, safe="")
         supabase_request(
             "PATCH",
             f"cards?scryfall_id=eq.{encoded}",
-            {column: value, "cardkingdom_price_updated_at": timestamp},
+            payload,
             {"Prefer": "return=minimal"},
         )
-        updated += 1
+
+    return normal_count, foil_count
+
+
+def build_card_price_rows(prices, timestamp):
+    rows = []
+    for sid, finishes in prices.items():
+        for finish, conditions in finishes.items():
+            for condition, price in conditions.items():
+                rows.append(
+                    {
+                        "scryfall_id": sid,
+                        "source": "cardkingdom",
+                        "finish": finish,
+                        "condition": condition,
+                        "price_usd": price,
+                        "updated_at": timestamp,
+                    }
+                )
+    return rows
+
+
+def upsert_condition_prices(rows):
+    updated = 0
+    for batch in chunked(rows, UPSERT_BATCH_SIZE):
+        supabase_request(
+            "POST",
+            "card_prices?on_conflict=scryfall_id,source,finish,condition",
+            batch,
+            {
+                "Prefer": "resolution=merge-duplicates,return=minimal",
+            },
+        )
+        updated += len(batch)
     return updated
 
 
 def sync(prices):
     timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    normal = {sid: row["normal"] for sid, row in prices.items() if row.get("normal") is not None}
-    foil = {sid: row["foil"] for sid, row in prices.items() if row.get("foil") is not None}
 
-    print("Syncing direct Card Kingdom prices to Supabase...")
-    normal_count = patch_finish(normal.keys(), "cardkingdom_normal_usd", normal, timestamp)
-    foil_count = patch_finish(foil.keys(), "cardkingdom_foil_usd", foil, timestamp)
-    print(f"Direct CK normal prices updated: {normal_count:,}")
-    print(f"Direct CK foil prices updated:   {foil_count:,}")
-    print("Etched prices were left unchanged intentionally.")
+    print("Syncing Card Kingdom condition prices to Supabase...")
+    rows = build_card_price_rows(prices, timestamp)
+    condition_count = upsert_condition_prices(rows)
+    normal_count, foil_count = patch_legacy_card_prices(prices, timestamp)
+
+    counts = {condition: 0 for condition in CK_CONDITION_FIELDS}
+    for row in rows:
+        counts[row["condition"]] += 1
+
+    print(f"Condition price rows upserted: {condition_count:,}")
+    for condition in ("NM", "EX", "VG", "G"):
+        print(f"  {condition}: {counts[condition]:,}")
+    print(f"Legacy CK normal NM prices updated: {normal_count:,}")
+    print(f"Legacy CK foil NM prices updated:   {foil_count:,}")
+    print("Etched and surgefoil remain unchanged until CK exposes a reliable finish signal.")
 
 
 def print_validation(prices):
@@ -187,10 +259,14 @@ def print_validation(prices):
     if sid not in prices:
         print("Validation case The Irencrag: no direct CK match")
         return
+
     print("Validation case: The Irencrag")
     print(f"  Scryfall ID: {sid}")
-    print(f"  normal: {prices[sid].get('normal')}")
-    print(f"  foil:   {prices[sid].get('foil')}")
+    for finish in ("nonfoil", "foil"):
+        values = prices[sid].get(finish, {})
+        print(f"  {finish}:")
+        for condition in ("NM", "EX", "VG", "G"):
+            print(f"    {condition}: {values.get(condition)}")
 
 
 def main():
@@ -199,13 +275,15 @@ def main():
     if not target_ids:
         print("No cards exist in public.cards. Nothing to update.")
         return
+
     products = fetch_cardkingdom_pricelist()
     prices = build_direct_prices(products, target_ids)
     print_validation(prices)
     sync(prices)
+
     missing = len(target_ids - set(prices.keys()))
     print(f"Catalog printings without a direct CK match: {missing:,}")
-    print("Direct Card Kingdom synchronization completed successfully.")
+    print("Direct Card Kingdom condition-price synchronization completed successfully.")
 
 
 if __name__ == "__main__":
