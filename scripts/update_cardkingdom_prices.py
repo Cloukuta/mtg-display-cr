@@ -1,6 +1,7 @@
 import gzip
 import json
 import os
+import re
 import tempfile
 import urllib.parse
 import urllib.request
@@ -38,7 +39,6 @@ def supabase_request(method, path, payload=None, extra_headers=None):
         headers["Content-Type"] = "application/json"
     if extra_headers:
         headers.update(extra_headers)
-
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
@@ -55,20 +55,17 @@ def fetch_target_scryfall_ids():
     result = set()
     offset = 0
     page_size = 1000
-
     while True:
         rows = supabase_request(
             "GET",
             f"cards?select=scryfall_id&order=scryfall_id&limit={page_size}&offset={offset}",
         ) or []
         for row in rows:
-            value = row.get("scryfall_id")
-            if value:
-                result.add(str(value))
+            if row.get("scryfall_id"):
+                result.add(str(row["scryfall_id"]))
         if len(rows) < page_size:
             break
         offset += page_size
-
     print(f"Target Scryfall printings: {len(result):,}")
     return result
 
@@ -77,7 +74,7 @@ def download(url, destination):
     print(f"Downloading: {url}")
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "mtg-display-cr/1.1 (GitHub price updater)"},
+        headers={"User-Agent": "mtg-display-cr/1.2 (GitHub price updater)"},
     )
     with urllib.request.urlopen(request, timeout=300) as response:
         with open(destination, "wb") as output:
@@ -95,10 +92,9 @@ def latest_price(points):
     valid = []
     for date, value in points.items():
         try:
-            price = float(value)
+            valid.append((str(date), float(value)))
         except (TypeError, ValueError):
             continue
-        valid.append((str(date), price))
     if not valid:
         return None
     valid.sort(key=lambda item: item[0])
@@ -127,61 +123,81 @@ def normalize_finish(value):
     return None
 
 
+def normalize_collector_number(value):
+    """Normalize finish/promo suffixes while keeping the numeric printing identity."""
+    value = str(value or "").strip().lower()
+    match = re.match(r"^0*([0-9]+)([a-z]*)$", value)
+    if match:
+        return str(int(match.group(1)))
+    return value
+
+
+def sibling_key(card):
+    return (
+        str(card.get("name") or "").strip().casefold(),
+        str(card.get("setCode") or "").strip().casefold(),
+        normalize_collector_number(card.get("number")),
+    )
+
+
+def card_meta(uuid, card):
+    identifiers = card.get("identifiers") or {}
+    finishes = {
+        finish
+        for finish in (normalize_finish(value) for value in (card.get("finishes") or []))
+        if finish
+    }
+    return {
+        "uuid": uuid,
+        "scryfall_id": identifiers.get("scryfallId"),
+        "name": card.get("name"),
+        "set_code": card.get("setCode"),
+        "number": card.get("number"),
+        "finishes": finishes,
+        "ck_ids": {
+            "normal": identifiers.get("cardKingdomId"),
+            "foil": identifiers.get("cardKingdomFoilId"),
+            "etched": identifiers.get("cardKingdomEtchedId"),
+        },
+        "counterparts": {
+            "normal": identifiers.get("mtgjsonNonFoilVersionId"),
+            "foil": identifiers.get("mtgjsonFoilVersionId"),
+        },
+    }
+
+
 def build_identifier_index(identifier_file, target_scryfall_ids):
     print("Building targeted identifier index...")
     cards = {}
     target_ck_ids = {"normal": set(), "foil": set(), "etched": set()}
-    ck_to_uuids = {
-        "normal": defaultdict(set),
-        "foil": defaultdict(set),
-        "etched": defaultdict(set),
-    }
+    ck_to_uuids = {finish: defaultdict(set) for finish in ("normal", "foil", "etched")}
     target_counterpart_uuids = set()
+    target_sibling_keys = set()
 
-    # Pass 1: keep exact Scryfall targets and all known finish counterpart UUIDs.
+    # Pass 1: exact Scryfall targets.
     with gzip.open(identifier_file, "rb") as file:
         for uuid, card in ijson.kvitems(file, "data"):
             identifiers = card.get("identifiers") or {}
-            scryfall_id = identifiers.get("scryfallId")
-            if scryfall_id not in target_scryfall_ids:
+            if identifiers.get("scryfallId") not in target_scryfall_ids:
                 continue
-
-            finishes = {
-                finish
-                for finish in (normalize_finish(value) for value in (card.get("finishes") or []))
-                if finish
-            }
-            card_data = {
-                "uuid": uuid,
-                "scryfall_id": scryfall_id,
-                "name": card.get("name"),
-                "set_code": card.get("setCode"),
-                "number": card.get("number"),
-                "finishes": finishes,
-                "ck_ids": {
-                    "normal": identifiers.get("cardKingdomId"),
-                    "foil": identifiers.get("cardKingdomFoilId"),
-                    "etched": identifiers.get("cardKingdomEtchedId"),
-                },
-                "counterparts": {
-                    "normal": identifiers.get("mtgjsonNonFoilVersionId"),
-                    "foil": identifiers.get("mtgjsonFoilVersionId"),
-                },
-            }
-            cards[uuid] = card_data
-
-            for finish, ck_id in card_data["ck_ids"].items():
+            meta = card_meta(uuid, card)
+            cards[uuid] = meta
+            target_sibling_keys.add(sibling_key(card))
+            for finish, ck_id in meta["ck_ids"].items():
                 if ck_id:
                     target_ck_ids[finish].add(str(ck_id))
-            for counterpart_uuid in card_data["counterparts"].values():
+            for counterpart_uuid in meta["counterparts"].values():
                 if counterpart_uuid:
                     target_counterpart_uuids.add(counterpart_uuid)
 
-    # Pass 2: build CK product-ID mappings and capture metadata for counterpart UUIDs.
+    # Pass 2: CK-ID matches, explicit counterparts, and conservative sibling printings.
     counterpart_meta = {}
+    sibling_to_uuids = defaultdict(set)
+    sibling_meta = {}
     with gzip.open(identifier_file, "rb") as file:
         for uuid, card in ijson.kvitems(file, "data"):
             identifiers = card.get("identifiers") or {}
+            meta = None
             normal_id = identifiers.get("cardKingdomId")
             foil_id = identifiers.get("cardKingdomFoilId")
             etched_id = identifiers.get("cardKingdomEtchedId")
@@ -194,57 +210,31 @@ def build_identifier_index(identifier_file, target_scryfall_ids):
                 ck_to_uuids["etched"][str(etched_id)].add(uuid)
 
             if uuid in target_counterpart_uuids:
-                counterpart_meta[uuid] = {
-                    "uuid": uuid,
-                    "ck_ids": {
-                        "normal": normal_id,
-                        "foil": foil_id,
-                        "etched": etched_id,
-                    },
-                    "counterparts": {
-                        "normal": identifiers.get("mtgjsonNonFoilVersionId"),
-                        "foil": identifiers.get("mtgjsonFoilVersionId"),
-                    },
-                }
+                meta = card_meta(uuid, card)
+                counterpart_meta[uuid] = meta
 
-    # Expand relevant UUIDs with CK-linked UUIDs discovered from counterpart metadata.
-    # This fixes printings where the target Scryfall record is the foil representation
-    # but the nonfoil CK price lives on its linked MTGJSON counterpart (and vice versa).
-    extra_ck_ids = {"normal": set(), "foil": set(), "etched": set()}
-    second_level_counterparts = set()
-    for meta in counterpart_meta.values():
-        for finish, ck_id in meta["ck_ids"].items():
-            if ck_id:
-                extra_ck_ids[finish].add(str(ck_id))
-        for counterpart_uuid in meta["counterparts"].values():
-            if counterpart_uuid:
-                second_level_counterparts.add(counterpart_uuid)
+            key = sibling_key(card)
+            if key in target_sibling_keys:
+                if meta is None:
+                    meta = card_meta(uuid, card)
+                sibling_to_uuids[key].add(uuid)
+                sibling_meta[uuid] = meta
 
-    if any(extra_ck_ids.values()):
-        with gzip.open(identifier_file, "rb") as file:
-            for uuid, card in ijson.kvitems(file, "data"):
-                identifiers = card.get("identifiers") or {}
-                for finish, field in (
-                    ("normal", "cardKingdomId"),
-                    ("foil", "cardKingdomFoilId"),
-                    ("etched", "cardKingdomEtchedId"),
-                ):
-                    ck_id = identifiers.get(field)
-                    if ck_id and str(ck_id) in extra_ck_ids[finish]:
-                        ck_to_uuids[finish][str(ck_id)].add(uuid)
-
-    relevant_uuids = set(cards.keys()) | target_counterpart_uuids | second_level_counterparts
+    relevant_uuids = set(cards) | target_counterpart_uuids | set(sibling_meta)
     for finish_map in ck_to_uuids.values():
         for values in finish_map.values():
             relevant_uuids.update(values)
 
     print(f"Matched target MTGJSON records: {len(cards):,}")
     print(f"Known finish counterpart UUIDs: {len(target_counterpart_uuids):,}")
+    print(f"Conservative sibling UUIDs: {len(sibling_meta):,}")
     print(f"Relevant price UUIDs: {len(relevant_uuids):,}")
     return {
         "cards": cards,
         "counterpart_meta": counterpart_meta,
         "ck_to_uuids": ck_to_uuids,
+        "sibling_to_uuids": sibling_to_uuids,
+        "sibling_meta": sibling_meta,
         "relevant_uuids": relevant_uuids,
     }
 
@@ -256,18 +246,12 @@ def load_cardkingdom_prices(price_file, relevant_uuids):
         for uuid, formats in ijson.kvitems(file, "data"):
             if uuid not in relevant_uuids:
                 continue
-            paper = formats.get("paper") or {}
-            cardkingdom = paper.get("cardkingdom") or {}
-            retail = cardkingdom.get("retail") or {}
+            retail = (((formats.get("paper") or {}).get("cardkingdom") or {}).get("retail") or {})
             normal = latest_price(retail.get("normal"))
             foil = latest_price(retail.get("foil"))
             etched = latest_price(retail.get("etched"))
             if any((normal, foil, etched)):
-                result[uuid] = {
-                    "normal": normal,
-                    "foil": foil,
-                    "etched": etched,
-                }
+                result[uuid] = {"normal": normal, "foil": foil, "etched": etched}
     print(f"Relevant UUIDs with CK prices: {len(result):,}")
     return result
 
@@ -292,8 +276,6 @@ def resolve_via_ck_id(card, finish, raw_prices, index):
     if not ck_id:
         return None
     candidates = index["ck_to_uuids"][finish].get(str(ck_id), set())
-    # MTGJSON can store a finish-specific CK product under a normal bucket on a
-    # finish-specific UUID, so the second bucket is a guarded product-ID fallback.
     buckets = (finish, "normal") if finish != "normal" else ("normal",)
     return price_from_candidate_uuids(raw_prices, candidates, buckets)
 
@@ -302,8 +284,6 @@ def resolve_from_counterpart(card, desired_finish, raw_prices, index):
     counterpart_uuid = card.get("counterparts", {}).get(desired_finish)
     if not counterpart_uuid:
         return None
-
-    # Exact counterpart UUID first.
     price = get_uuid_price(raw_prices, counterpart_uuid, desired_finish)
     if price:
         return price
@@ -311,52 +291,71 @@ def resolve_from_counterpart(card, desired_finish, raw_prices, index):
         price = get_uuid_price(raw_prices, counterpart_uuid, "normal")
         if price:
             return price
-
-    # Then use the counterpart's own finish-specific CK product ID.
     meta = index["counterpart_meta"].get(counterpart_uuid)
     if not meta:
         return None
-    ck_id = meta.get("ck_ids", {}).get(desired_finish)
-    if not ck_id:
-        return None
-    candidates = index["ck_to_uuids"][desired_finish].get(str(ck_id), set())
-    buckets = (desired_finish, "normal") if desired_finish != "normal" else ("normal",)
-    return price_from_candidate_uuids(raw_prices, candidates, buckets)
+    return resolve_via_ck_id(meta, desired_finish, raw_prices, index)
+
+
+def resolve_from_sibling(card, desired_finish, raw_prices, index):
+    """Use only same-name, same-set, same-base-collector siblings advertising that finish."""
+    key = (
+        str(card.get("name") or "").strip().casefold(),
+        str(card.get("set_code") or "").strip().casefold(),
+        normalize_collector_number(card.get("number")),
+    )
+    candidates = index["sibling_to_uuids"].get(key, set())
+    result = None
+    for uuid in candidates:
+        meta = index["sibling_meta"].get(uuid)
+        if not meta or desired_finish not in meta.get("finishes", set()):
+            continue
+        price = get_uuid_price(raw_prices, uuid, desired_finish)
+        if price:
+            result = choose_newer_price(result, price)
+            continue
+        price = resolve_via_ck_id(meta, desired_finish, raw_prices, index)
+        if price:
+            result = choose_newer_price(result, price)
+    return result
 
 
 def resolve_price(card, finish, raw_prices, index):
-    # 1. Exact MTGJSON UUID / exact finish.
+    # 1. Exact UUID and finish.
     price = get_uuid_price(raw_prices, card["uuid"], finish)
     if price:
         return price
 
-    # 2. Explicit MTGJSON finish counterpart.
+    # 2. Explicit MTGJSON finish counterpart when available.
     if finish in {"normal", "foil"}:
         price = resolve_from_counterpart(card, finish, raw_prices, index)
         if price:
             return price
 
-    # 3. Explicit Card Kingdom product ID for this finish.
+    # 3. Explicit Card Kingdom product ID.
     price = resolve_via_ck_id(card, finish, raw_prices, index)
     if price:
         return price
 
-    # 4. For finish-specific target UUIDs, MTGJSON sometimes puts that CK price
-    #    in the normal bucket. Only use this when a finish-specific CK ID exists.
+    # 4. Conservative sibling fallback. This covers promo records such as 248p
+    # whose CK nonfoil/foil products can live on separate MTGJSON representations.
+    price = resolve_from_sibling(card, finish, raw_prices, index)
+    if price:
+        return price
+
+    # 5. Finish-specific CK products may be stored in MTGJSON's normal bucket.
     if finish != "normal" and card.get("ck_ids", {}).get(finish):
         price = get_uuid_price(raw_prices, card["uuid"], "normal")
         if price:
             return price
-
     return None
 
 
 def build_updates(index, raw_prices):
     by_scryfall = {}
     for card in index["cards"].values():
-        scryfall_id = card["scryfall_id"]
         record = by_scryfall.setdefault(
-            scryfall_id,
+            card["scryfall_id"],
             {"normal": None, "foil": None, "etched": None, "expected": set()},
         )
         record["expected"].update(card.get("finishes") or set())
@@ -370,20 +369,18 @@ def build_updates(index, raw_prices):
 def print_diagnostics(updates):
     print("\nPrice resolution diagnostics")
     print("----------------------------")
-    total = len(updates)
     resolved = {
         finish: sum(1 for row in updates.values() if row.get(finish))
         for finish in ("normal", "foil", "etched")
     }
     expected_missing = {
         finish: sum(
-            1
-            for row in updates.values()
+            1 for row in updates.values()
             if finish in row.get("expected", set()) and not row.get(finish)
         )
         for finish in ("normal", "foil", "etched")
     }
-    print(f"Target printings resolved: {total:,}")
+    print(f"Target printings resolved: {len(updates):,}")
     print(f"CK normal resolved:        {resolved['normal']:,}")
     print(f"CK foil resolved:          {resolved['foil']:,}")
     print(f"CK etched resolved:        {resolved['etched']:,}")
@@ -406,12 +403,10 @@ def sync_to_supabase(updates):
     updated = 0
     skipped = 0
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-
     for scryfall_id, prices in updates.items():
         if not any(prices.get(finish) for finish in ("normal", "foil", "etched")):
             skipped += 1
             continue
-
         payload = {
             "cardkingdom_normal_usd": prices["normal"]["price"] if prices["normal"] else None,
             "cardkingdom_foil_usd": prices["foil"]["price"] if prices["foil"] else None,
@@ -426,7 +421,6 @@ def sync_to_supabase(updates):
             {"Prefer": "return=minimal"},
         )
         updated += 1
-
     print(f"Updated Supabase cards: {updated:,}")
     print(f"Cards without any CK price: {skipped:,}")
 
@@ -437,7 +431,6 @@ def main():
     if not target_ids:
         print("No cards exist in public.cards yet. Nothing to update.")
         return
-
     with tempfile.TemporaryDirectory() as temp:
         identifiers_file = os.path.join(temp, "AllIdentifiers.json.gz")
         prices_file = os.path.join(temp, "AllPricesToday.json.gz")
@@ -448,7 +441,6 @@ def main():
         updates = build_updates(index, raw_prices)
         print_diagnostics(updates)
         sync_to_supabase(updates)
-
     print("Card Kingdom price update completed successfully.")
 
 
