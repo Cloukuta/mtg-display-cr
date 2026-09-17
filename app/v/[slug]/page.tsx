@@ -2,139 +2,36 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { Menu, MessageCircle, Minus, Plus, Search, ShoppingCart, X } from "lucide-react";
+import { AlertCircle, LogIn, Menu, Minus, Plus, Search, ShoppingCart, UserRound, X } from "lucide-react";
 import AppMenu from "@/components/AppMenu";
 import BrandLogo from "@/components/BrandLogo";
 import { getSupabase } from "@/lib/supabase";
 
-type PricingMode = "default" | "custom" | "discount";
-type SortMode = "price-desc" | "price-asc" | "name-asc" | "name-desc";
-type Profile = { id:string; public_name:string; whatsapp:string; location:string; delivery_text:string };
-type Card = { scryfall_id:string; name:string; set_code:string; set_name:string; collector_number:string; image_uri:string|null };
-type RawItem = { id:number; quantity:number; condition:string; finish:string; pricing_mode:PricingMode; custom_price_crc:number|null; cards:Card };
-type Item = RawItem & { price_crc:number|null; market_price_usd:number|null };
-type CardPrice = { scryfall_id:string; finish:string; condition:string; price_usd:number };
-type PricingSettings = { usd_to_crc:number; discount_percent:number };
-
-const crc = new Intl.NumberFormat("es-CR", { style:"currency", currency:"CRC", maximumFractionDigits:0 });
-
-function normalizeFinish(value:string){
-  const finish=value.trim().toLowerCase().replace(/[ _-]+/g,"");
-  if(finish==="nonfoil"||finish==="normal") return "nonfoil";
-  if(finish==="foil") return "foil";
-  if(finish==="etched") return "etched";
-  if(finish==="surgefoil") return "surgefoil";
-  return finish;
-}
-
-function resolvePrice(item:RawItem, prices:CardPrice[], settings:PricingSettings):Item {
-  if(item.pricing_mode==="custom") return {...item,price_crc:item.custom_price_crc,market_price_usd:null};
-  const finish=normalizeFinish(item.finish);
-  const condition=item.condition.trim().toUpperCase();
-  const market=prices.find(p=>p.scryfall_id===item.cards.scryfall_id&&normalizeFinish(p.finish)===finish&&p.condition.toUpperCase()===condition);
-  if(!market) return {...item,price_crc:null,market_price_usd:null};
-  const base=Number(market.price_usd)*settings.usd_to_crc;
-  const price=item.pricing_mode==="discount"?Math.round(base*(1-settings.discount_percent/100)):Math.round(base);
-  return {...item,price_crc:price,market_price_usd:Number(market.price_usd)};
-}
-
-function comparePrice(a:Item,b:Item,direction:"asc"|"desc"){
-  if(a.price_crc==null&&b.price_crc==null)return a.cards.name.localeCompare(b.cards.name);
-  if(a.price_crc==null)return 1;
-  if(b.price_crc==null)return -1;
-  return direction==="asc"?a.price_crc-b.price_crc:b.price_crc-a.price_crc;
-}
-
+type PricingMode="default"|"custom"|"discount"; type SortMode="price-desc"|"price-asc"|"name-asc"|"name-desc";
+type Profile={id:string;public_name:string;whatsapp:string;location:string;delivery_text:string};
+type Card={scryfall_id:string;name:string;set_code:string;set_name:string;collector_number:string;image_uri:string|null};
+type RawItem={id:number;quantity:number;condition:string;finish:string;pricing_mode:PricingMode;custom_price_crc:number|null;cards:Card};
+type Item=RawItem&{price_crc:number|null;market_price_usd:number|null}; type CardPrice={scryfall_id:string;finish:string;condition:string;price_usd:number}; type PricingSettings={usd_to_crc:number;discount_percent:number};
+type Gate={kind:"auth"|"profile";missing:string[]}|null;
+const crc=new Intl.NumberFormat("es-CR",{style:"currency",currency:"CRC",maximumFractionDigits:0});
+function normalizeFinish(value:string){const f=value.trim().toLowerCase().replace(/[ _-]+/g,"");if(f==="nonfoil"||f==="normal")return"nonfoil";if(f==="foil")return"foil";if(f==="etched")return"etched";if(f==="surgefoil")return"surgefoil";return f}
+function resolvePrice(item:RawItem,prices:CardPrice[],settings:PricingSettings):Item{if(item.pricing_mode==="custom")return{...item,price_crc:item.custom_price_crc,market_price_usd:null};const f=normalizeFinish(item.finish),c=item.condition.trim().toUpperCase(),m=prices.find(p=>p.scryfall_id===item.cards.scryfall_id&&normalizeFinish(p.finish)===f&&p.condition.toUpperCase()===c);if(!m)return{...item,price_crc:null,market_price_usd:null};const base=Number(m.price_usd)*settings.usd_to_crc;return{...item,price_crc:item.pricing_mode==="discount"?Math.round(base*(1-settings.discount_percent/100)):Math.round(base),market_price_usd:Number(m.price_usd)}}
+function comparePrice(a:Item,b:Item,d:"asc"|"desc"){if(a.price_crc==null&&b.price_crc==null)return a.cards.name.localeCompare(b.cards.name);if(a.price_crc==null)return 1;if(b.price_crc==null)return-1;return d==="asc"?a.price_crc-b.price_crc:b.price_crc-a.price_crc}
 export default function SellerCatalog(){
-  const {slug}=useParams<{slug:string}>();
-  const [profile,setProfile]=useState<Profile|null>(null);
-  const [items,setItems]=useState<Item[]>([]);
-  const [search,setSearch]=useState("");
-  const [setFilter,setSetFilter]=useState("");
-  const [sort,setSort]=useState<SortMode>("price-desc");
-  const [cart,setCart]=useState<Record<number,number>>({});
-  const [open,setOpen]=useState(false);
-  const [menuOpen,setMenuOpen]=useState(false);
-  const [loading,setLoading]=useState(true);
-
-  useEffect(()=>{
-    const supabase=getSupabase();
-    if(!supabase||!slug){setLoading(false);return;}
-    void supabase.from("profiles").select("id,public_name,whatsapp,location,delivery_text").eq("slug",slug).eq("published",true).single().then(async({data})=>{
-      if(!data){setLoading(false);return;}
-      const seller=data as Profile; setProfile(seller);
-      const [inventoryResult,settingsResult]=await Promise.all([
-        supabase.from("inventory_items").select("id,quantity,condition,finish,pricing_mode,custom_price_crc,cards(scryfall_id,name,set_code,set_name,collector_number,image_uri)").eq("seller_id",seller.id).eq("available",true).gt("quantity",0),
-        supabase.from("seller_pricing_settings").select("usd_to_crc,discount_percent").eq("seller_id",seller.id).maybeSingle()
-      ]);
-      const raw=(inventoryResult.data||[]) as unknown as RawItem[];
-      const settings:PricingSettings=settingsResult.data?{usd_to_crc:Number(settingsResult.data.usd_to_crc),discount_percent:Number(settingsResult.data.discount_percent)}:{usd_to_crc:520,discount_percent:20};
-      const ids=Array.from(new Set(raw.map(i=>i.cards?.scryfall_id).filter(Boolean)));
-      let marketPrices:CardPrice[]=[];
-      if(ids.length){
-        const priceResult=await supabase.from("card_prices").select("scryfall_id,finish,condition,price_usd").eq("source","cardkingdom").in("scryfall_id",ids);
-        marketPrices=(priceResult.data||[]) as CardPrice[];
-      }
-      setItems(raw.map(item=>resolvePrice(item,marketPrices,settings)));
-      setLoading(false);
-    });
-  },[slug]);
-
-  const sets=useMemo(()=>Array.from(new Map(items.map(item=>[item.cards.set_code.toLowerCase(),{code:item.cards.set_code.toLowerCase(),name:item.cards.set_name}])).values()).sort((a,b)=>a.code.localeCompare(b.code)),[items]);
-  const visible=useMemo(()=>{
-    const term=search.trim().toLowerCase();
-    return items.filter(item=>{
-      if(setFilter&&item.cards.set_code.toLowerCase()!==setFilter)return false;
-      return `${item.cards.name} ${item.cards.set_code} ${item.cards.set_name}`.toLowerCase().includes(term);
-    }).sort((a,b)=>{
-      if(sort==="price-asc")return comparePrice(a,b,"asc");
-      if(sort==="price-desc")return comparePrice(a,b,"desc");
-      if(sort==="name-desc")return b.cards.name.localeCompare(a.cards.name);
-      return a.cards.name.localeCompare(b.cards.name);
-    });
-  },[items,search,setFilter,sort]);
-  const selected=items.filter(item=>cart[item.id]);
-  const count=selected.reduce((sum,item)=>sum+cart[item.id],0);
-  const total=selected.reduce((sum,item)=>sum+cart[item.id]*(item.price_crc??0),0);
-  const initials=useMemo(()=>profile?.public_name.split(/\s+/).slice(0,2).map(part=>part[0]).join("").toUpperCase()||"MTG",[profile]);
-
-  function change(item:Item,delta:number){
-    if(item.price_crc==null)return;
-    setCart(current=>{const amount=Math.min(item.quantity,Math.max(0,(current[item.id]||0)+delta));const next={...current};if(amount)next[item.id]=amount;else delete next[item.id];return next;});
-  }
-
-  function whatsapp(){
-    if(!profile)return;
-    const detail=selected.map(item=>`• ${cart[item.id]}x ${item.cards.name} (${item.cards.set_code.toUpperCase()} #${item.cards.collector_number}) — ${crc.format((item.price_crc??0)*cart[item.id])}`).join("\n");
-    const text=`Hi ${profile.public_name}, I am interested in these cards:\n\n${detail}\n\nEstimated total: ${crc.format(total)}\nAre they still available?`;
-    window.open(`https://wa.me/${profile.whatsapp}?text=${encodeURIComponent(text)}`,"_blank","noopener,noreferrer");
-  }
-
-  if(loading)return <main className="grid min-h-screen place-items-center bg-background text-muted-foreground">Loading catalog…</main>;
-  if(!profile)return <main className="grid min-h-screen place-items-center bg-background p-5 text-foreground"><section className="text-center"><h1 className="font-serif text-4xl">Display unavailable</h1><p className="mt-3 text-muted-foreground">This link does not exist or the seller has not published the catalog yet.</p><a href="/" className="mt-6 inline-block rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground">Go to home</a></section></main>;
-
-  return <main className="min-h-screen bg-background pb-24 text-foreground">
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 text-foreground shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-7">
-        <BrandLogo href="/" />
-        <div className="flex items-center gap-2">
-          <button onClick={()=>setOpen(true)} className="flex h-10 items-center gap-2 rounded-xl bg-primary px-3 sm:px-4 text-sm font-bold text-primary-foreground"><ShoppingCart size={17}/><span className="hidden xs:inline">Cart</span>{count?` (${count})`:""}</button>
-          <button type="button" onClick={()=>setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen} className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition hover:text-foreground"><Menu size={19}/><span className="hidden sm:inline">Menu</span></button>
-        </div>
-      </div>
-    </header>
-    <AppMenu open={menuOpen} onClose={()=>setMenuOpen(false)} currentPath={`/v/${slug}`} sellerName={profile.public_name} sellerSlug={slug}/>
-    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-7">
-      <div className="flex items-end justify-between gap-5 border-b border-border pb-7"><div><p className="text-xs font-bold uppercase tracking-[.15em] text-primary">Public catalog</p><h1 className="mt-2 font-serif text-4xl sm:text-5xl">{profile.public_name}</h1><p className="mt-2 text-sm text-muted-foreground">{profile.location}{profile.delivery_text?` · ${profile.delivery_text}`:""}</p></div><div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary font-serif text-xl font-bold text-primary-foreground">{initials}</div></div>
-      <div className="mt-6 grid gap-3 md:grid-cols-[1fr_220px_220px]">
-        <label className="relative block"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or set…" className="h-12 w-full rounded-xl border border-border bg-card pl-11 pr-4 outline-none focus:border-primary"/></label>
-        <select value={setFilter} onChange={e=>setSetFilter(e.target.value)} className="h-12 rounded-xl border border-border bg-card px-4 text-sm outline-none focus:border-primary"><option value="">Set: None</option>{sets.map(set=><option key={set.code} value={set.code}>{set.code.toUpperCase()} · {set.name}</option>)}</select>
-        <select value={sort} onChange={e=>setSort(e.target.value as SortMode)} className="h-12 rounded-xl border border-border bg-card px-4 text-sm outline-none focus:border-primary"><option value="price-desc">Price: High → Low</option><option value="price-asc">Price: Low → High</option><option value="name-asc">Name: A → Z</option><option value="name-desc">Name: Z → A</option></select>
-      </div>
-      <p className="mb-5 mt-5 text-sm text-muted-foreground"><strong className="text-foreground">{visible.length}</strong> cards available</p>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-5">{visible.map(item=>{const qty=cart[item.id]||0;return <article key={item.id} className="min-w-0"><div className="overflow-hidden rounded-[4.7%/3.4%] bg-secondary">{item.cards.image_uri&&<img src={item.cards.image_uri} alt={`Card ${item.cards.name}`} className="aspect-[488/680] w-full object-cover"/>}</div><h2 className="mt-3 truncate font-semibold">{item.cards.name}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{item.cards.set_code.toUpperCase()} #{item.cards.collector_number} · {item.condition} · {item.finish}</p><div className="mt-3 flex items-center justify-between"><div><p className={`font-bold ${item.price_crc==null?"text-amber-500":"text-primary"}`}>{item.price_crc==null?"Price pending":crc.format(item.price_crc)}</p><p className="text-[11px] text-muted-foreground">{item.quantity} available</p></div>{item.price_crc!=null&&(qty?<div className="flex items-center rounded-xl bg-primary text-primary-foreground"><button onClick={()=>change(item,-1)} className="grid h-10 w-9 place-items-center"><Minus size={14}/></button><span className="w-5 text-center text-sm font-bold">{qty}</span><button onClick={()=>change(item,1)} disabled={qty>=item.quantity} className="grid h-10 w-9 place-items-center disabled:opacity-30"><Plus size={14}/></button></div>:<button onClick={()=>change(item,1)} className="grid h-10 w-10 place-items-center rounded-xl border border-border hover:bg-primary hover:text-primary-foreground"><Plus size={17}/></button>)}</div></article>})}</div>
-    </section>
-    {count>0&&<button onClick={()=>setOpen(true)} className="fixed bottom-4 left-4 right-4 z-20 flex h-14 items-center justify-between rounded-2xl bg-primary px-5 font-bold text-primary-foreground shadow-2xl md:hidden"><span>{count} cards</span><span>{crc.format(total)} · View cart</span></button>}
-    {open&&<div onMouseDown={event=>event.currentTarget===event.target&&setOpen(false)} className="fixed inset-0 z-[90] flex justify-end bg-black/65 backdrop-blur-sm"><aside className="flex h-full w-full max-w-md flex-col bg-card text-card-foreground"><div className="flex items-center justify-between border-b border-border p-5"><h2 className="font-serif text-2xl">My cart</h2><button onClick={()=>setOpen(false)} className="grid h-10 w-10 place-items-center rounded-xl border border-border"><X size={17}/></button></div><div className="flex-1 space-y-4 overflow-y-auto p-5">{selected.map(item=><div key={item.id} className="flex justify-between gap-3"><div><p className="font-semibold">{item.cards.name}</p><p className="mt-1 text-xs text-muted-foreground">{cart[item.id]} × {crc.format(item.price_crc??0)}</p></div><strong className="text-primary">{crc.format(cart[item.id]*(item.price_crc??0))}</strong></div>)}</div><div className="border-t border-border p-5"><p className="mb-4 text-right font-serif text-3xl text-primary">{crc.format(total)}</p><button onClick={whatsapp} disabled={!count||!profile.whatsapp} className="flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-[#25d366] font-bold text-[#07140b] disabled:opacity-40"><MessageCircle size={19}/> Ask on WhatsApp</button><p className="mt-3 text-center text-xs text-muted-foreground">The seller will confirm availability and the final total.</p></div></aside></div>}
-  </main>;
-}
+ const{slug}=useParams<{slug:string}>();const[profile,setProfile]=useState<Profile|null>(null),[items,setItems]=useState<Item[]>([]),[search,setSearch]=useState(""),[setFilter,setSetFilter]=useState(""),[sort,setSort]=useState<SortMode>("price-desc"),[cart,setCart]=useState<Record<number,number>>({}),[open,setOpen]=useState(false),[menuOpen,setMenuOpen]=useState(false),[loading,setLoading]=useState(true),[gate,setGate]=useState<Gate>(null),[checking,setChecking]=useState(false);
+ const cartKey=`mtg-display-cr-cart:${slug}`;
+ useEffect(()=>{try{const saved=localStorage.getItem(cartKey);if(saved)setCart(JSON.parse(saved))}catch{}},[cartKey]);useEffect(()=>{if(!loading)try{localStorage.setItem(cartKey,JSON.stringify(cart))}catch{}},[cart,cartKey,loading]);
+ useEffect(()=>{const s=getSupabase();if(!s||!slug){setLoading(false);return}void s.from("profiles").select("id,public_name,whatsapp,location,delivery_text").eq("slug",slug).eq("published",true).single().then(async({data})=>{if(!data){setLoading(false);return}const seller=data as Profile;setProfile(seller);const[ir,sr]=await Promise.all([s.from("inventory_items").select("id,quantity,condition,finish,pricing_mode,custom_price_crc,cards(scryfall_id,name,set_code,set_name,collector_number,image_uri)").eq("seller_id",seller.id).eq("available",true).gt("quantity",0),s.from("seller_pricing_settings").select("usd_to_crc,discount_percent").eq("seller_id",seller.id).maybeSingle()]);const raw=(ir.data||[])as unknown as RawItem[],settings:PricingSettings=sr.data?{usd_to_crc:Number(sr.data.usd_to_crc),discount_percent:Number(sr.data.discount_percent)}:{usd_to_crc:520,discount_percent:20},ids=Array.from(new Set(raw.map(i=>i.cards?.scryfall_id).filter(Boolean)));let prices:CardPrice[]=[];if(ids.length){const pr=await s.from("card_prices").select("scryfall_id,finish,condition,price_usd").eq("source","cardkingdom").in("scryfall_id",ids);prices=(pr.data||[])as CardPrice[]}setItems(raw.map(i=>resolvePrice(i,prices,settings)));setLoading(false)})},[slug]);
+ const sets=useMemo(()=>Array.from(new Map(items.map(i=>[i.cards.set_code.toLowerCase(),{code:i.cards.set_code.toLowerCase(),name:i.cards.set_name}])).values()).sort((a,b)=>a.code.localeCompare(b.code)),[items]);const visible=useMemo(()=>{const term=search.trim().toLowerCase();return items.filter(i=>(!setFilter||i.cards.set_code.toLowerCase()===setFilter)&&`${i.cards.name} ${i.cards.set_code} ${i.cards.set_name}`.toLowerCase().includes(term)).sort((a,b)=>sort==="price-asc"?comparePrice(a,b,"asc"):sort==="price-desc"?comparePrice(a,b,"desc"):sort==="name-desc"?b.cards.name.localeCompare(a.cards.name):a.cards.name.localeCompare(b.cards.name))},[items,search,setFilter,sort]);const selected=items.filter(i=>cart[i.id]),count=selected.reduce((n,i)=>n+cart[i.id],0),total=selected.reduce((n,i)=>n+cart[i.id]*(i.price_crc??0),0),initials=useMemo(()=>profile?.public_name.split(/\s+/).slice(0,2).map(p=>p[0]).join("").toUpperCase()||"MTG",[profile]);
+ function change(item:Item,delta:number){if(item.price_crc==null)return;setCart(c=>{const amount=Math.min(item.quantity,Math.max(0,(c[item.id]||0)+delta)),n={...c};if(amount)n[item.id]=amount;else delete n[item.id];return n})}
+ async function continueCheckout(){const s=getSupabase();if(!s||!profile||!count)return;setChecking(true);const{data:{user}}=await s.auth.getUser();if(!user){setChecking(false);setGate({kind:"auth",missing:[]});return}const[{data:p},{data:pickup}]=await Promise.all([s.from("profiles").select("public_name,whatsapp").eq("id",user.id).maybeSingle(),s.from("profile_delivery_points").select("delivery_point_id").eq("profile_id",user.id).eq("role","buyer_pickup").limit(1)]);const missing:string[]=[];if(!p?.public_name?.trim())missing.push("Public name");if(!p?.whatsapp?.trim())missing.push("WhatsApp");if(!pickup?.length)missing.push("At least one Red de Envíos pickup location");setChecking(false);if(missing.length){setGate({kind:"profile",missing});return}location.href=`/checkout/${slug}`}
+ async function signIn(){const s=getSupabase();if(!s)return;const returnTo=`/v/${slug}?checkout=1`;try{sessionStorage.setItem("mtg-checkout-return",returnTo)}catch{}await s.auth.signInWithOAuth({provider:"google",options:{redirectTo:`${location.origin}${returnTo}`}})}
+ function profileRedirect(){const returnTo=`/v/${slug}?checkout=1`;try{sessionStorage.setItem("mtg-checkout-return",returnTo)}catch{}location.href=`/profile?returnTo=${encodeURIComponent(returnTo)}&checkout=1`}
+ useEffect(()=>{if(!loading&&new URLSearchParams(location.search).get("checkout")==="1"&&Object.keys(cart).length)setOpen(true)},[loading,cart]);
+ if(loading)return <main className="grid min-h-screen place-items-center bg-background text-muted-foreground">Loading catalog…</main>;if(!profile)return <main className="grid min-h-screen place-items-center bg-background p-5 text-foreground"><section className="text-center"><h1 className="font-serif text-4xl">Display unavailable</h1><p className="mt-3 text-muted-foreground">This link does not exist or the seller has not published the catalog yet.</p><a href="/" className="mt-6 inline-block rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground">Go to home</a></section></main>;
+ return <main className="min-h-screen bg-background pb-24 text-foreground"><header className="sticky top-0 z-50 border-b border-border bg-background/95 shadow-sm backdrop-blur"><div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-7"><BrandLogo href="/"/><div className="flex items-center gap-2"><button onClick={()=>setOpen(true)} className="flex h-10 items-center gap-2 rounded-xl bg-primary px-3 text-sm font-bold text-primary-foreground"><ShoppingCart size={17}/>Cart{count?` (${count})`:""}</button><button onClick={()=>setMenuOpen(true)} className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-muted-foreground"><Menu size={19}/>Menu</button></div></div></header><AppMenu open={menuOpen} onClose={()=>setMenuOpen(false)} currentPath={`/v/${slug}`} sellerName={profile.public_name} sellerSlug={slug}/>
+ <section className="mx-auto max-w-7xl px-4 py-8 sm:px-7"><div className="flex items-end justify-between gap-5 border-b border-border pb-7"><div><p className="text-xs font-bold uppercase tracking-[.15em] text-primary">Public catalog</p><h1 className="mt-2 font-serif text-4xl sm:text-5xl">{profile.public_name}</h1><p className="mt-2 text-sm text-muted-foreground">{profile.location}{profile.delivery_text?` · ${profile.delivery_text}`:""}</p></div><div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary font-serif text-xl font-bold text-primary-foreground">{initials}</div></div><div className="mt-6 grid gap-3 md:grid-cols-[1fr_220px_220px]"><label className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or set…" className="h-12 w-full rounded-xl border border-border bg-card pl-11 pr-4 outline-none"/></label><select value={setFilter} onChange={e=>setSetFilter(e.target.value)} className="h-12 rounded-xl border border-border bg-card px-4 text-sm"><option value="">Set: None</option>{sets.map(s=><option key={s.code} value={s.code}>{s.code.toUpperCase()} · {s.name}</option>)}</select><select value={sort} onChange={e=>setSort(e.target.value as SortMode)} className="h-12 rounded-xl border border-border bg-card px-4 text-sm"><option value="price-desc">Price: High → Low</option><option value="price-asc">Price: Low → High</option><option value="name-asc">Name: A → Z</option><option value="name-desc">Name: Z → A</option></select></div><p className="mb-5 mt-5 text-sm text-muted-foreground"><strong className="text-foreground">{visible.length}</strong> cards available</p><div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-5">{visible.map(item=>{const qty=cart[item.id]||0;return <article key={item.id}><div className="overflow-hidden rounded-[4.7%/3.4%] bg-secondary">{item.cards.image_uri&&<img src={item.cards.image_uri} alt={`Card ${item.cards.name}`} className="aspect-[488/680] w-full object-cover"/>}</div><h2 className="mt-3 truncate font-semibold">{item.cards.name}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{item.cards.set_code.toUpperCase()} #{item.cards.collector_number} · {item.condition} · {item.finish}</p><div className="mt-3 flex items-center justify-between"><div><p className={`font-bold ${item.price_crc==null?"text-amber-500":"text-primary"}`}>{item.price_crc==null?"Price pending":crc.format(item.price_crc)}</p><p className="text-[11px] text-muted-foreground">{item.quantity} available</p></div>{item.price_crc!=null&&(qty?<div className="flex items-center rounded-xl bg-primary text-primary-foreground"><button onClick={()=>change(item,-1)} className="grid h-10 w-9 place-items-center"><Minus size={14}/></button><span className="w-5 text-center text-sm font-bold">{qty}</span><button onClick={()=>change(item,1)} disabled={qty>=item.quantity} className="grid h-10 w-9 place-items-center disabled:opacity-30"><Plus size={14}/></button></div>:<button onClick={()=>change(item,1)} className="grid h-10 w-10 place-items-center rounded-xl border border-border"><Plus size={17}/></button>)}</div></article>})}</div></section>
+ {count>0&&<button onClick={()=>setOpen(true)} className="fixed bottom-4 left-4 right-4 z-20 flex h-14 items-center justify-between rounded-2xl bg-primary px-5 font-bold text-primary-foreground shadow-2xl md:hidden"><span>{count} cards</span><span>{crc.format(total)} · View cart</span></button>}
+ {open&&<div onMouseDown={e=>e.currentTarget===e.target&&setOpen(false)} className="fixed inset-0 z-[90] flex justify-end bg-black/65 backdrop-blur-sm"><aside className="flex h-full w-full max-w-md flex-col bg-card"><div className="flex items-center justify-between border-b border-border p-5"><h2 className="font-serif text-2xl">My cart</h2><button onClick={()=>setOpen(false)} className="grid h-10 w-10 place-items-center rounded-xl border border-border"><X size={17}/></button></div><div className="flex-1 space-y-4 overflow-y-auto p-5">{selected.map(i=><div key={i.id} className="flex justify-between gap-3"><div><p className="font-semibold">{i.cards.name}</p><p className="mt-1 text-xs text-muted-foreground">{cart[i.id]} × {crc.format(i.price_crc??0)}</p></div><strong className="text-primary">{crc.format(cart[i.id]*(i.price_crc??0))}</strong></div>)}</div><div className="border-t border-border p-5"><p className="mb-4 text-right font-serif text-3xl text-primary">{crc.format(total)}</p><button onClick={()=>void continueCheckout()} disabled={!count||checking} className="flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-primary font-bold text-primary-foreground disabled:opacity-40"><ShoppingCart size={19}/>{checking?"Checking profile…":"Continue to checkout"}</button><p className="mt-3 text-center text-xs text-muted-foreground">You must be signed in with a complete buyer profile to place an order.</p></div></aside></div>}
+ {gate&&<div className="fixed inset-0 z-[110] grid place-items-center bg-black/70 p-4 backdrop-blur-sm"><section className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl"><div className="flex items-start justify-between gap-4"><div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary">{gate.kind==="auth"?<LogIn size={21}/>:<UserRound size={21}/>}</div><button onClick={()=>setGate(null)} className="grid h-9 w-9 place-items-center rounded-xl border border-border"><X size={16}/></button></div><h2 className="mt-5 font-serif text-3xl">{gate.kind==="auth"?"Sign in to continue":"Complete your profile"}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{gate.kind==="auth"?"An account is required to place orders and keep your purchase information linked to you.":"We need the following information before you can place this order."}</p>{gate.kind==="profile"&&<div className="mt-5 space-y-2">{gate.missing.map(m=><div key={m} className="flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[.06] px-3 py-2.5 text-sm"><AlertCircle size={16} className="text-amber-500"/><span>{m}</span></div>)}</div>}<div className="mt-6 grid gap-2 sm:grid-cols-2"><button onClick={()=>setGate(null)} className="h-11 rounded-xl border border-border font-semibold text-muted-foreground">Cancel</button>{gate.kind==="auth"?<button onClick={()=>void signIn()} className="h-11 rounded-xl bg-primary font-bold text-primary-foreground">Sign in / Create account</button>:<button onClick={profileRedirect} className="h-11 rounded-xl bg-primary font-bold text-primary-foreground">Complete profile</button>}</div></section></div>}
+ </main>}
