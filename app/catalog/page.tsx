@@ -24,7 +24,7 @@ export default function CatalogPage(){
 
   <section className="mt-8">
    <div className="mb-3 flex items-center justify-between gap-4"><div className="flex items-center gap-3"><div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary"><PackageOpen size={18}/></div><h2 className="font-serif text-2xl">Binders</h2></div>{categoryButton(es?"Crear Binder":"Create Binder",false,()=>setCreateBinderSignal(v=>v+1))}</div>
-   <CatalogBinderHome sellerId={user.id} onOpen={binder=>router.push(`/catalog/singles/binders/${binder.id}`)} createSignal={createBinderSignal} compact/>
+   <CatalogBinderHome sellerId={user.id} onOpen={binder=>router.push(`/catalog/binders/${binder.id}`)} createSignal={createBinderSignal} compact/>
   </section>
 
   <section className="mt-8">
