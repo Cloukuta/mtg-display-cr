@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, Package, Plus, Shapes } from "lucide-react";
+import { Boxes, LockKeyhole, Package, Plus, Shapes } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 
 const sealedProducts = ["Booster Boxes", "Bundles", "Commander Decks"];
@@ -34,14 +34,17 @@ export default function CatalogPage() {
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary"><Boxes size={19} /></span>
               <h2 className="font-serif text-2xl">Binders</h2>
             </div>
-            <a href="/catalog/binders" className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground">
-              <Plus size={17} /> Administrar Binders
-            </a>
+            <button disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-primary/40 px-4 py-3 text-sm font-bold text-primary-foreground/70">
+              <Plus size={17} /> Crear Binder
+            </button>
           </div>
           <a href="/catalog/binders" className="flex items-center justify-between rounded-2xl border border-border bg-card px-5 py-5 transition hover:border-primary/40">
             <div>
-              <strong>Inventario de cartas</strong>
-              <p className="mt-1 text-sm text-muted-foreground">Accede al catálogo de cartas conservado desde la versión estable.</p>
+              <div className="flex items-center gap-2">
+                <strong>Trade Binder</strong>
+                <LockKeyhole size={15} className="text-muted-foreground" aria-label="Binder predeterminado" />
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">Binder principal de tu inventario de cartas.</p>
             </div>
             <span className="text-sm font-semibold text-primary">Abrir →</span>
           </a>
