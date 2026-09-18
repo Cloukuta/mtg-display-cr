@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { Box, PackageOpen, Shapes, Store } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
@@ -10,6 +11,7 @@ import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY, type Language } from "@/lib/i18
 
 export default function CatalogPage(){
  const supabase=getSupabase();
+ const router=useRouter();
  const[user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),[language,setLanguage]=useState<Language>(DEFAULT_LANGUAGE);const es=language==="es";
  useEffect(()=>{const stored=localStorage.getItem(LANGUAGE_STORAGE_KEY);if(stored==="es"||stored==="en")setLanguage(stored);const h=(e:Event)=>{const v=(e as CustomEvent<Language>).detail;if(v==="es"||v==="en")setLanguage(v)};window.addEventListener("mtg-language-change",h);return()=>window.removeEventListener("mtg-language-change",h)},[]);
  useEffect(()=>{if(!supabase){setLoading(false);return}supabase.auth.getUser().then(({data})=>{setUser(data.user);setLoading(false)});const{data}=supabase.auth.onAuthStateChange((_e,s)=>setUser(s?.user||null));return()=>data.subscription.unsubscribe()},[supabase]);
@@ -22,7 +24,7 @@ export default function CatalogPage(){
 
   <section className="mt-8">
    <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><PackageOpen size={20}/></div><div><h2 className="font-serif text-2xl">Binders</h2><p className="text-sm text-muted-foreground">{es?"Tus cartas organizadas por Binder.":"Your cards organized by Binder."}</p></div></div>
-   <CatalogBinderHome sellerId={user.id} onOpen={binder=>{window.location.href=`/catalog/singles/binders/${binder.id}`}}/>
+   <CatalogBinderHome sellerId={user.id} onOpen={binder=>router.push(`/catalog/singles/binders/${binder.id}`)}/>
   </section>
 
   <section className="mt-10 grid gap-5 md:grid-cols-2">
