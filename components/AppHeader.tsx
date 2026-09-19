@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import AppMenu from "@/components/AppMenu";
@@ -10,19 +11,12 @@ import CatalogInventoryEditor from "@/components/CatalogInventoryEditor";
 
 import { getSupabase } from "@/lib/supabase";
 
-type SellerProfile = {
-  public_name: string | null;
-  slug: string | null;
-};
+type SellerProfile = { public_name: string | null; slug: string | null };
+type AppHeaderProps = { currentPath?: string };
 
-type AppHeaderProps = {
-  currentPath?: string;
-};
-
-export default function AppHeader({
-  currentPath = "",
-}: AppHeaderProps) {
+export default function AppHeader({ currentPath = "" }: AppHeaderProps) {
   const supabase = getSupabase();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState<SellerProfile | null>(null);
 
@@ -47,7 +41,7 @@ export default function AppHeader({
           <BrandLogo />
           <div className="flex items-center gap-2">
             {currentPath === "/pending-sales" && <PendingSalesTestButton />}
-            {currentPath === "/catalog" && <CatalogInventoryEditor />}
+            {currentPath === "/catalog" && pathname === "/catalog/binders" && <CatalogInventoryEditor />}
             <button type="button" onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen} className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
               <Menu size={19} />
               <span className="hidden sm:inline">Menu</span>
