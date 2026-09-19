@@ -8,128 +8,25 @@ import { getSupabase } from "@/lib/supabase";
 const sealedProducts = ["Booster Boxes", "Bundles", "Commander Decks"];
 const otherProducts = ["Figuras", "Accesorios"];
 
-type Binder = {
-  id: number;
-  name: string;
-  is_default: boolean;
-  is_public: boolean;
-};
+type Binder = { id:number; name:string; is_default:boolean; is_public:boolean };
+type BinderRowProps={binder:Binder;onRename:(binder:Binder)=>Promise<void>;onToggleVisibility:(binder:Binder)=>Promise<void>;onDelete:(binder:Binder)=>Promise<void>};
 
-function ComingSoonRow({ name }: { name: string }) {
-  return (
-    <div className="flex items-center justify-between border-b border-border px-5 py-4 last:border-b-0">
-      <span className="font-semibold text-muted-foreground">{name}</span>
-      <span className="rounded-full border border-border px-3 py-1 text-[10px] font-bold uppercase tracking-[.12em] text-muted-foreground">Próximamente</span>
-    </div>
-  );
+function ComingSoonRow({ name }: { name: string }) {return <div className="flex items-center justify-between border-b border-border px-5 py-4 last:border-b-0"><span className="font-semibold text-muted-foreground">{name}</span><span className="rounded-full border border-border px-3 py-1 text-[10px] font-bold uppercase tracking-[.12em] text-muted-foreground">Próximamente</span></div>}
+
+function BinderRow({binder,onRename,onToggleVisibility,onDelete}:BinderRowProps){
+ const[menuOpen,setMenuOpen]=useState(false),[working,setWorking]=useState(false);const menuRef=useRef<HTMLDivElement>(null);
+ useEffect(()=>{const close=(event:MouseEvent)=>{if(menuRef.current&&!menuRef.current.contains(event.target as Node))setMenuOpen(false)};document.addEventListener("mousedown",close);return()=>document.removeEventListener("mousedown",close)},[]);
+ async function run(action:()=>Promise<void>){setWorking(true);setMenuOpen(false);try{await action()}finally{setWorking(false)}}
+ return <div className="relative flex items-center border-b border-border last:border-b-0"><a href={binder.is_default?"/catalog/binders":`/catalog/binders/${binder.id}`} className="min-w-0 flex-1 px-5 py-5 transition hover:bg-secondary/30"><div className="flex items-center gap-2"><strong className="truncate">{binder.name}</strong>{binder.is_default&&<LockKeyhole size={15} className="shrink-0 text-muted-foreground" aria-label="Binder predeterminado"/>}{binder.is_public?<Eye size={15} className="shrink-0 text-muted-foreground" aria-label="Visible en vitrina"/>:<EyeOff size={15} className="shrink-0 text-muted-foreground" aria-label="Oculto en vitrina"/>}</div><p className="mt-1 text-sm text-muted-foreground">{binder.is_default?"Binder principal de tu inventario de cartas.":binder.is_public?"Visible en tu vitrina pública.":"Oculto de tu vitrina pública."}</p></a><div ref={menuRef} className="relative mr-4"><button type="button" disabled={working} onClick={()=>setMenuOpen(v=>!v)} className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-background text-muted-foreground transition hover:text-foreground disabled:opacity-50" aria-label={`Opciones de ${binder.name}`}><MoreVertical size={18}/></button>{menuOpen&&<div className="absolute right-0 top-12 z-20 w-52 overflow-hidden rounded-xl border border-border bg-card p-1 shadow-xl">{!binder.is_default&&<button type="button" onClick={()=>void run(()=>onRename(binder))} className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-secondary">Cambiar nombre</button>}<button type="button" onClick={()=>void run(()=>onToggleVisibility(binder))} className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-secondary">{binder.is_public?"Ocultar de vitrina":"Mostrar en vitrina"}</button>{!binder.is_default&&<button type="button" onClick={()=>void run(()=>onDelete(binder))} className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-500/10">Eliminar Binder</button>}</div>}</div></div>
 }
 
-function BinderRow({ binder }: { binder: Binder }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const close = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, []);
-
-  return (
-    <div className="relative flex items-center border-b border-border last:border-b-0">
-      <a href={binder.is_default ? "/catalog/binders" : `/catalog/binders/${binder.id}`} className="min-w-0 flex-1 px-5 py-5 transition hover:bg-secondary/30">
-        <div className="flex items-center gap-2">
-          <strong className="truncate">{binder.name}</strong>
-          {binder.is_default && <LockKeyhole size={15} className="shrink-0 text-muted-foreground" aria-label="Binder predeterminado" />}
-          {binder.is_public ? <Eye size={15} className="shrink-0 text-muted-foreground" aria-label="Visible en vitrina" /> : <EyeOff size={15} className="shrink-0 text-muted-foreground" aria-label="Oculto en vitrina" />}
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">{binder.is_default ? "Binder principal de tu inventario de cartas." : binder.is_public ? "Visible en tu vitrina pública." : "Oculto de tu vitrina pública."}</p>
-      </a>
-
-      <div ref={menuRef} className="relative mr-4">
-        <button type="button" onClick={() => setMenuOpen((value) => !value)} className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-background text-muted-foreground transition hover:text-foreground" aria-label={`Opciones de ${binder.name}`}>
-          <MoreVertical size={18} />
-        </button>
-        {menuOpen && (
-          <div className="absolute right-0 top-12 z-20 w-52 overflow-hidden rounded-xl border border-border bg-card p-1 shadow-xl">
-            {!binder.is_default && <button type="button" disabled className="w-full cursor-not-allowed rounded-lg px-3 py-2 text-left text-sm text-muted-foreground opacity-60">Cambiar nombre</button>}
-            <button type="button" disabled className="w-full cursor-not-allowed rounded-lg px-3 py-2 text-left text-sm text-muted-foreground opacity-60">{binder.is_public ? "Ocultar de vitrina" : "Mostrar en vitrina"}</button>
-            {!binder.is_default && <button type="button" disabled className="w-full cursor-not-allowed rounded-lg px-3 py-2 text-left text-sm text-red-500 opacity-60">Eliminar Binder</button>}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function CatalogPage() {
-  const supabase = getSupabase();
-  const [binders, setBinders] = useState<Binder[]>([]);
-  const [loadingBinders, setLoadingBinders] = useState(true);
-  const [binderError, setBinderError] = useState("");
-
-  useEffect(() => {
-    if (!supabase) {
-      setLoadingBinders(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      if (cancelled) return;
-      const user = authData.user;
-      if (!user) {
-        setBinders([]);
-        setLoadingBinders(false);
-        return;
-      }
-      const { data, error } = await supabase.from("binders").select("id,name,is_default,is_public").eq("seller_id", user.id).order("is_default", { ascending: false }).order("id", { ascending: true });
-      if (cancelled) return;
-      if (error) {
-        setBinderError(error.message);
-        setBinders([]);
-      } else {
-        setBinders((data || []) as Binder[]);
-      }
-      setLoadingBinders(false);
-    })();
-    return () => { cancelled = true; };
-  }, [supabase]);
-
-  return (
-    <main className="min-h-screen bg-background text-foreground">
-      <AppHeader currentPath="/catalog" />
-      <div className="mx-auto max-w-7xl px-5 py-8">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[.15em] text-primary">Inventario del vendedor</p>
-          <h1 className="mt-2 font-serif text-4xl">Catálogo / Inventario</h1>
-          <p className="mt-2 text-muted-foreground">Administra el inventario de tu tienda por categoría.</p>
-        </div>
-
-        <section className="mt-8">
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary"><Boxes size={19} /></span>
-              <h2 className="font-serif text-2xl">Binders</h2>
-            </div>
-            <button disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-primary/40 px-4 py-3 text-sm font-bold text-primary-foreground/70"><Plus size={17} /> Crear Binder</button>
-          </div>
-          <div className="overflow-visible rounded-2xl border border-border bg-card">
-            {loadingBinders ? <div className="px-5 py-5 text-sm text-muted-foreground">Cargando Binders…</div> : binderError ? <div className="px-5 py-5 text-sm text-red-500">{binderError}</div> : binders.length ? binders.map((binder) => <BinderRow key={binder.id} binder={binder} />) : <div className="px-5 py-5 text-sm text-muted-foreground">No se encontraron Binders.</div>}
-          </div>
-        </section>
-
-        <section className="mt-8">
-          <div className="mb-3 flex items-center justify-between gap-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-secondary text-muted-foreground"><Package size={19} /></span><h2 className="font-serif text-2xl">Producto sellado</h2></div><button disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-primary/40 px-4 py-3 text-sm font-bold text-primary-foreground/70"><Plus size={17} /> Agregar producto</button></div>
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">{sealedProducts.map((name) => <ComingSoonRow key={name} name={name} />)}</div>
-        </section>
-
-        <section className="mt-8 pb-10">
-          <div className="mb-3 flex items-center justify-between gap-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-secondary text-muted-foreground"><Shapes size={19} /></span><h2 className="font-serif text-2xl">Otros productos</h2></div><button disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-primary/40 px-4 py-3 text-sm font-bold text-primary-foreground/70"><Plus size={17} /> Agregar producto</button></div>
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">{otherProducts.map((name) => <ComingSoonRow key={name} name={name} />)}</div>
-        </section>
-      </div>
-    </main>
-  );
+export default function CatalogPage(){
+ const supabase=getSupabase();const[binders,setBinders]=useState<Binder[]>([]),[loadingBinders,setLoadingBinders]=useState(true),[binderError,setBinderError]=useState(""),[notice,setNotice]=useState(""),[creatingBinder,setCreatingBinder]=useState(false);
+ useEffect(()=>{if(!supabase){setLoadingBinders(false);return}let cancelled=false;(async()=>{const{data:authData}=await supabase.auth.getUser();if(cancelled)return;const user=authData.user;if(!user){setBinders([]);setLoadingBinders(false);return}const{data,error}=await supabase.from("binders").select("id,name,is_default,is_public").eq("seller_id",user.id).order("is_default",{ascending:false}).order("id",{ascending:true});if(cancelled)return;if(error){setBinderError(error.message);setBinders([])}else setBinders((data||[]) as Binder[]);setLoadingBinders(false)})();return()=>{cancelled=true}},[supabase]);
+ async function getUser(){if(!supabase)return null;const{data}=await supabase.auth.getUser();return data.user}
+ async function createBinder(){if(!supabase||creatingBinder)return;const name=window.prompt("Nombre del nuevo Binder:")?.trim();if(!name)return;if(binders.some(x=>x.name.trim().toLowerCase()===name.toLowerCase())){setNotice(`Ya existe un Binder llamado ${name}.`);return}const user=await getUser();if(!user){setNotice("Debes iniciar sesión para crear un Binder.");return}setCreatingBinder(true);setNotice("");const{data,error}=await supabase.from("binders").insert({seller_id:user.id,name,is_default:false,is_public:false}).select("id,name,is_default,is_public").single();setCreatingBinder(false);if(error){setNotice(error.message);return}const created=data as Binder;setBinders(current=>[...current,created].sort((a,b)=>Number(b.is_default)-Number(a.is_default)||a.id-b.id));setNotice(`${created.name} fue creado como Binder privado.`)}
+ async function renameBinder(binder:Binder){if(!supabase)return;const next=window.prompt(`Nuevo nombre para ${binder.name}:`,binder.name)?.trim();if(!next||next===binder.name)return;if(binders.some(x=>x.id!==binder.id&&x.name.trim().toLowerCase()===next.toLowerCase())){setNotice(`Ya existe un Binder llamado ${next}.`);return}const user=await getUser();if(!user)return;const{error}=await supabase.from("binders").update({name:next}).eq("id",binder.id).eq("seller_id",user.id).eq("is_default",false);if(error){setNotice(error.message);return}setBinders(current=>current.map(x=>x.id===binder.id?{...x,name:next}:x));setNotice(`Binder renombrado a ${next}.`)}
+ async function toggleVisibility(binder:Binder){if(!supabase)return;const user=await getUser();if(!user)return;const{error}=await supabase.from("binders").update({is_public:!binder.is_public}).eq("id",binder.id).eq("seller_id",user.id);if(error){setNotice(error.message);return}setBinders(current=>current.map(x=>x.id===binder.id?{...x,is_public:!x.is_public}:x));setNotice(!binder.is_public?`${binder.name} ahora es visible en la vitrina.`:`${binder.name} ahora está oculto de la vitrina.`)}
+ async function deleteBinder(binder:Binder){if(!supabase||binder.is_default)return;const user=await getUser();if(!user)return;const main=binders.find(x=>x.is_default);if(!main){setNotice("No se encontró el Trade Binder principal. No se eliminó nada.");return}const confirmed=window.confirm(`¿Realmente deseas eliminar el binder [${binder.name}]?\n\nEsta acción no es reversible. Todas las cartas de este binder pasarán al main binder [${main.name}].`);if(!confirmed)return;setNotice("");const{error:moveError}=await supabase.from("inventory_items").update({binder_id:main.id,updated_at:new Date().toISOString()}).eq("seller_id",user.id).eq("binder_id",binder.id);if(moveError){setNotice(`No se pudo mover el inventario: ${moveError.message}. El Binder no fue eliminado.`);return}const{error:deleteError}=await supabase.from("binders").delete().eq("id",binder.id).eq("seller_id",user.id).eq("is_default",false);if(deleteError){setNotice(`Las cartas se movieron a ${main.name}, pero no se pudo eliminar el Binder: ${deleteError.message}`);return}setBinders(current=>current.filter(x=>x.id!==binder.id));setNotice(`${binder.name} fue eliminado. Todas sus cartas pasaron a ${main.name}.`)}
+ return <main className="min-h-screen bg-background text-foreground"><AppHeader currentPath="/catalog"/><div className="mx-auto max-w-7xl px-5 py-8"><div><p className="text-xs font-bold uppercase tracking-[.15em] text-primary">Inventario del vendedor</p><h1 className="mt-2 font-serif text-4xl">Catálogo / Inventario</h1><p className="mt-2 text-muted-foreground">Administra el inventario de tu tienda por categoría.</p></div>{notice&&<div className="mt-5 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{notice}</div>}<section className="mt-8"><div className="mb-3 flex items-center justify-between gap-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary"><Boxes size={19}/></span><h2 className="font-serif text-2xl">Binders</h2></div><button type="button" disabled={creatingBinder} onClick={()=>void createBinder()} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60"><Plus size={17}/> {creatingBinder?"Creando…":"Crear Binder"}</button></div><div className="overflow-visible rounded-2xl border border-border bg-card">{loadingBinders?<div className="px-5 py-5 text-sm text-muted-foreground">Cargando Binders…</div>:binderError?<div className="px-5 py-5 text-sm text-red-500">{binderError}</div>:binders.length?binders.map(binder=><BinderRow key={binder.id} binder={binder} onRename={renameBinder} onToggleVisibility={toggleVisibility} onDelete={deleteBinder}/>):<div className="px-5 py-5 text-sm text-muted-foreground">No se encontraron Binders.</div>}</div></section><section className="mt-8"><div className="mb-3 flex items-center justify-between gap-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-secondary text-muted-foreground"><Package size={19}/></span><h2 className="font-serif text-2xl">Producto sellado</h2></div><button disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-primary/40 px-4 py-3 text-sm font-bold text-primary-foreground/70"><Plus size={17}/> Agregar producto</button></div><div className="overflow-hidden rounded-2xl border border-border bg-card">{sealedProducts.map(name=><ComingSoonRow key={name} name={name}/>)}</div></section><section className="mt-8 pb-10"><div className="mb-3 flex items-center justify-between gap-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-secondary text-muted-foreground"><Shapes size={19}/></span><h2 className="font-serif text-2xl">Otros productos</h2></div><button disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-primary/40 px-4 py-3 text-sm font-bold text-primary-foreground/70"><Plus size={17}/> Agregar producto</button></div><div className="overflow-hidden rounded-2xl border border-border bg-card">{otherProducts.map(name=><ComingSoonRow key={name} name={name}/>)}</div></section></div></main>
 }
