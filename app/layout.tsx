@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import CardFinishEffects from "@/components/CardFinishEffects";
 
 export const metadata: Metadata = {
   title: "MTG Display CR | Magic Card Marketplace Costa Rica",
@@ -71,6 +72,7 @@ export default function RootLayout({
 
       <body className="antialiased">
         {children}
+        <CardFinishEffects />
       </body>
     </html>
   );
