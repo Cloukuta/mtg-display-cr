@@ -6,7 +6,7 @@ type BrandLogoProps = {
 
 export default function BrandLogo({
   compact = false,
-  href = "/dashboard",
+  href = "/",
   className = "",
 }: BrandLogoProps) {
   return (
