@@ -233,9 +233,13 @@ export default function ImportPage() {
       return;
     }
 
+    const uniqueCards = Array.from(
+      new Map(resolved.map((row) => [row.card!.scryfall_id, row.card!])).values()
+    );
+
     const { error: cardError } = await supabase
       .from("cards")
-      .upsert(resolved.map((row) => row.card!), { onConflict: "scryfall_id" });
+      .upsert(uniqueCards, { onConflict: "scryfall_id" });
 
     if (cardError) {
       setNotice(cardError.message);
