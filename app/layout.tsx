@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./card-finishes.css";
 import CardFinishEffects from "@/components/CardFinishEffects";
 
 export const metadata: Metadata = {
