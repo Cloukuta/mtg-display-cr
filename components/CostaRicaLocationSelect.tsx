@@ -11,10 +11,10 @@ export default function CostaRicaLocationSelect({value,onChange,language}:Props)
  const[province,setProvince]=useState(parsed.province);
  const[canton,setCanton]=useState(parsed.canton);
  const es=language==="es";
- useEffect(()=>{const next=parseCostaRicaLocation(value);setProvince(next.province);setCanton(next.canton)},[value]);
+ useEffect(()=>{const next=parseCostaRicaLocation(value);if(next.province&&next.canton){setProvince(next.province);setCanton(next.canton)}},[value]);
  const cantons=province?(COSTA_RICA_LOCATIONS[province as CostaRicaProvince] as readonly string[]):[];
- function changeProvince(next:string){setProvince(next);setCanton("");onChange("")}
- function changeCanton(next:string){setCanton(next);onChange(formatCostaRicaLocation(province,next))}
+ function changeProvince(next:string){setProvince(next);setCanton("")}
+ function changeCanton(next:string){setCanton(next);if(province&&next)onChange(formatCostaRicaLocation(province,next))}
  return <div className="grid gap-2">
   <div className="grid gap-3 sm:grid-cols-2">
    <label className="grid gap-1.5 text-sm text-muted-foreground">{es?"Provincia":"Province"}<select value={province} onChange={e=>changeProvince(e.target.value)} className="h-11 rounded-xl border border-border bg-background px-4 text-foreground outline-none focus:border-primary"><option value="">{es?"Seleccionar provincia":"Select province"}</option>{COSTA_RICA_PROVINCES.map(item=><option key={item} value={item}>{item}</option>)}</select></label>
