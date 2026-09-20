@@ -26,5 +26,26 @@ export default function CatalogInventoryEditor(){
  async function save(next:Item){if(!supabase)return;const payload={quantity:next.quantity,condition:next.condition,language:next.language,finish:next.finish,pricing_mode:next.pricing_mode,custom_price_crc:next.pricing_mode==="custom"?next.custom_price_crc:null,binder_id:next.binder_id,available:next.quantity>0,updated_at:new Date().toISOString()};const{error}=await supabase.from("inventory_items").update(payload).eq("id",next.id);if(error){setNotice(error.message);return}setNotice(es?"Cambios guardados.":"Changes saved.");setIndex(-1);window.location.reload()}
  async function createBinder(name:string):Promise<Binder|null>{if(!supabase)return null;const{data:auth}=await supabase.auth.getUser();if(!auth.user)return null;const clean=name.trim();if(!clean)return null;const{data,error}=await supabase.from("binders").insert({seller_id:auth.user.id,name:clean,is_default:false,is_public:false}).select("id,name,is_default,is_public").single();if(error){setNotice(error.message);return null}const created=data as Binder;setBinders(current=>[...current,created].sort((a,b)=>Number(b.is_default)-Number(a.is_default)||a.name.localeCompare(b.name)));return created}
  if(selectedBinderId==null)return null;
- return <><style>{`section.sticky[class*="top-[76px]"]{top:64px!important;z-index:40!important}`}</style>{notice&&<div className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-2xl">{notice}</div>}<InventoryEditModal open={index>=0} item={item} binders={binders} language={language} hasPrevious={index>0} hasNext={index>=0&&index<items.length-1} onClose={()=>setIndex(-1)} onPrevious={()=>setIndex(i=>Math.max(0,i-1))} onNext={()=>setIndex(i=>Math.min(items.length-1,i+1))} onSave={save} onCreateBinder={createBinder}/></>
+ return <><style>{`
+section.sticky.top-4,
+section.sticky[class*="top-[76px]"]{
+ position:fixed!important;
+ top:auto!important;
+ bottom:20px!important;
+ left:50%!important;
+ right:auto!important;
+ width:min(calc(100vw - 32px),80rem)!important;
+ margin:0!important;
+ transform:translateX(-50%)!important;
+ z-index:70!important;
+ box-shadow:0 20px 50px rgba(0,0,0,.45)!important;
+}
+@media (max-width:640px){
+ section.sticky.top-4,
+ section.sticky[class*="top-[76px]"]{
+  bottom:12px!important;
+  width:calc(100vw - 20px)!important;
+ }
+}
+`}</style>{notice&&<div className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-2xl">{notice}</div>}<InventoryEditModal open={index>=0} item={item} binders={binders} language={language} hasPrevious={index>0} hasNext={index>=0&&index<items.length-1} onClose={()=>setIndex(-1)} onPrevious={()=>setIndex(i=>Math.max(0,i-1))} onNext={()=>setIndex(i=>Math.min(items.length-1,i+1))} onSave={save} onCreateBinder={createBinder}/></>
 }
