@@ -136,6 +136,9 @@ select { color-scheme: inherit; }
 .app-input { background: var(--surface-secondary); border-color: var(--border); color: var(--foreground); }
 .app-overlay { background: var(--overlay); }
 
+/* Pending sales now lives in the seller hamburger menu. Hide the legacy catalog CTA. */
+main > div.mx-auto.max-w-7xl a[href="/pending-sales"] { display: none !important; }
+
 /* =========================================================
    TEMPORARY LEGACY COLOR BRIDGE
    ========================================================= */
