@@ -6,299 +6,32 @@
    MTG DISPLAY CR
    GLOBAL THEME SYSTEM
    ========================================================= */
-
-/* DARK THEME — DEFAULT */
-
-:root,
-[data-theme="dark"] {
-  color-scheme: dark;
-
-  --background: #0b0e0d;
-  --foreground: #f4f3ed;
-
-  --card: #151917;
-  --card-foreground: #f4f3ed;
-
-  --surface: #101411;
-  --surface-secondary: #151917;
-  --surface-tertiary: #1c211e;
-
-  --primary: #b9f54a;
-  --primary-foreground: #10140d;
-
-  --secondary: #1c211e;
-  --secondary-foreground: #f4f3ed;
-
-  --muted: #1c211e;
-  --muted-foreground: #939a95;
-
-  --accent: #b9f54a;
-  --accent-foreground: #10140d;
-
-  --border: #ffffff1a;
-  --input: #ffffff20;
-  --ring: #b9f54a;
-
-  --overlay: rgba(0, 0, 0, 0.72);
-
-  --text-primary: #f4f3ed;
-  --text-secondary: rgba(255, 255, 255, 0.65);
-  --text-muted: rgba(255, 255, 255, 0.45);
-  --text-subtle: rgba(255, 255, 255, 0.30);
-
-  --success: #b9f54a;
-
-  --radius: 0.8rem;
-}
+:root,[data-theme="dark"]{color-scheme:dark;--background:#0b0e0d;--foreground:#f4f3ed;--card:#151917;--card-foreground:#f4f3ed;--surface:#101411;--surface-secondary:#151917;--surface-tertiary:#1c211e;--primary:#b9f54a;--primary-foreground:#10140d;--secondary:#1c211e;--secondary-foreground:#f4f3ed;--muted:#1c211e;--muted-foreground:#939a95;--accent:#b9f54a;--accent-foreground:#10140d;--border:#ffffff1a;--input:#ffffff20;--ring:#b9f54a;--overlay:rgba(0,0,0,.72);--text-primary:#f4f3ed;--text-secondary:rgba(255,255,255,.65);--text-muted:rgba(255,255,255,.45);--text-subtle:rgba(255,255,255,.30);--success:#b9f54a;--radius:.8rem}
+[data-theme="light"]{color-scheme:light;--background:#e9ebe6;--foreground:#111411;--card:#f4f5f1;--card-foreground:#111411;--surface:#f1f2ee;--surface-secondary:#e5e8e2;--surface-tertiary:#daddd6;--primary:#527d08;--primary-foreground:#fff;--primary-bright:#a8ef32;--secondary:#dfe3dc;--secondary-foreground:#111411;--muted:#dfe3dc;--muted-foreground:#4b554c;--accent:#527d08;--accent-foreground:#fff;--border:#1720172e;--input:#17201735;--ring:#527d08;--overlay:rgba(15,20,15,.55);--text-primary:#111411;--text-secondary:#343b35;--text-muted:#505951;--text-subtle:#697169;--success:#527d08;--radius:.8rem}
+@theme inline{--color-background:var(--background);--color-foreground:var(--foreground);--color-card:var(--card);--color-card-foreground:var(--card-foreground);--color-primary:var(--primary);--color-primary-foreground:var(--primary-foreground);--color-secondary:var(--secondary);--color-secondary-foreground:var(--secondary-foreground);--color-muted:var(--muted);--color-muted-foreground:var(--muted-foreground);--color-accent:var(--accent);--color-accent-foreground:var(--accent-foreground);--color-border:var(--border);--color-input:var(--input);--color-ring:var(--ring);--radius-lg:var(--radius);--font-sans:Arial,Helvetica,sans-serif;--font-serif:Georgia,"Times New Roman",serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth;background:var(--background)}body{margin:0;min-height:100vh;background:var(--background);color:var(--foreground);font-family:Arial,Helvetica,sans-serif;transition:background-color 180ms ease,color 180ms ease}button,select{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--ring);outline-offset:3px}select{color-scheme:inherit}
+.app-background{background:var(--background);color:var(--foreground)}.app-surface{background:var(--surface);color:var(--foreground)}.app-card{background:var(--card);color:var(--card-foreground);border-color:var(--border)}.app-border{border-color:var(--border)}.app-text{color:var(--text-primary)}.app-text-secondary{color:var(--text-secondary)}.app-text-muted{color:var(--text-muted)}.app-text-subtle{color:var(--text-subtle)}.app-input{background:var(--surface-secondary);border-color:var(--border);color:var(--foreground)}.app-overlay{background:var(--overlay)}
+main>div.mx-auto.max-w-7xl a[href="/pending-sales"]{display:none!important}
+[data-theme="light"] .bg-\[\#0b0e0d\]{background-color:var(--background)!important}[data-theme="light"] .bg-\[\#101411\]{background-color:var(--surface)!important}[data-theme="light"] .text-\[\#f4f3ed\]{color:var(--foreground)!important}[data-theme="light"] .text-white\/30{color:var(--text-subtle)!important}[data-theme="light"] .text-white\/35,[data-theme="light"] .text-white\/40,[data-theme="light"] .text-white\/45{color:var(--text-muted)!important}[data-theme="light"] .text-white\/50,[data-theme="light"] .text-white\/55,[data-theme="light"] .text-white\/60,[data-theme="light"] .text-white\/65{color:var(--text-secondary)!important}[data-theme="light"] .text-white{color:var(--foreground)!important}[data-theme="light"] .border-white\/10{border-color:var(--border)!important}[data-theme="light"] .bg-white\/\[\.025\],[data-theme="light"] .bg-white\/\[\.035\],[data-theme="light"] .bg-white\/\[\.04\],[data-theme="light"] .bg-white\/\[\.05\],[data-theme="light"] .bg-white\/\[\.06\]{background-color:var(--surface-secondary)!important}[data-theme="light"] .bg-black\/15,[data-theme="light"] .bg-black\/20{background-color:var(--surface-secondary)!important}[data-theme="light"] input,[data-theme="light"] textarea,[data-theme="light"] select{color:var(--foreground)}
+[data-theme="light"]{color:var(--foreground)}[data-theme="light"] .text-white{color:#111411!important}[data-theme="light"] .text-white\/30,[data-theme="light"] .text-white\/35,[data-theme="light"] .text-white\/40{color:#697169!important}[data-theme="light"] .text-white\/45,[data-theme="light"] .text-white\/50,[data-theme="light"] .text-white\/55{color:#505951!important}[data-theme="light"] .text-white\/60,[data-theme="light"] .text-white\/65{color:#343b35!important}[data-theme="light"] .text-\[\#b9f54a\]{color:#527d08!important}[data-theme="light"] .bg-\[\#b9f54a\]{background-color:#a8ef32!important}[data-theme="light"] .bg-\[\#b9f54a\].text-\[\#11150d\]{color:#11150d!important}[data-theme="light"] .bg-\[\#b9f54a\]\/\[\.04\],[data-theme="light"] .bg-\[\#b9f54a\]\/\[\.06\]{background-color:rgba(82,125,8,.08)!important}[data-theme="light"] .text-amber-100,[data-theme="light"] .text-amber-200,[data-theme="light"] .text-amber-300{color:#805700!important}[data-theme="light"] .bg-amber-300\/\[\.04\],[data-theme="light"] .bg-amber-300\/\[\.05\],[data-theme="light"] .bg-amber-300\/\[\.06\]{background-color:rgba(128,87,0,.07)!important}
 
 /* =========================================================
-   LIGHT THEME
+   HOMEPAGE ATMOSPHERE
+   Scoped to the marketplace home through its #cards anchor.
+   Adds depth without introducing image assets or visual noise.
    ========================================================= */
+main:has(a[href="#cards"]){position:relative;isolation:isolate;overflow:hidden;background:
+ radial-gradient(ellipse 70% 38% at 82% 8%,color-mix(in srgb,var(--primary) 10%,transparent),transparent 70%),
+ radial-gradient(ellipse 55% 30% at 5% 29%,rgba(93,72,155,.10),transparent 72%),
+ radial-gradient(ellipse 60% 32% at 90% 67%,color-mix(in srgb,var(--primary) 6%,transparent),transparent 72%),
+ var(--background)}
+main:has(a[href="#cards"])::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:52px 52px;mask-image:linear-gradient(to bottom,black,transparent 42%,black 72%,transparent)}
+main:has(a[href="#cards"])>section{position:relative;background-color:transparent}
+main:has(a[href="#cards"])>section:first-of-type::after{content:"";position:absolute;width:420px;height:420px;right:-180px;bottom:-210px;border:1px solid color-mix(in srgb,var(--primary) 12%,transparent);border-radius:50%;box-shadow:0 0 90px color-mix(in srgb,var(--primary) 4%,transparent);pointer-events:none}
+main:has(a[href="#cards"]) .bg-card{box-shadow:0 14px 45px rgba(0,0,0,.10);backdrop-filter:blur(7px)}
+main:has(a[href="#cards"]) #cards{background:linear-gradient(180deg,color-mix(in srgb,var(--card) 48%,transparent),color-mix(in srgb,var(--background) 70%,transparent),color-mix(in srgb,var(--card) 42%,transparent))}
+[data-theme="light"] main:has(a[href="#cards"]){background:radial-gradient(ellipse 70% 38% at 82% 8%,rgba(82,125,8,.11),transparent 70%),radial-gradient(ellipse 55% 30% at 5% 29%,rgba(101,85,145,.07),transparent 72%),radial-gradient(ellipse 60% 32% at 90% 67%,rgba(82,125,8,.07),transparent 72%),var(--background)}
+[data-theme="light"] main:has(a[href="#cards"])::before{opacity:.35;background-image:linear-gradient(rgba(17,20,17,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(17,20,17,.035) 1px,transparent 1px)}
+[data-theme="light"] main:has(a[href="#cards"]) .bg-card{box-shadow:0 14px 40px rgba(35,45,35,.08)}
 
-[data-theme="light"] {
-  color-scheme: light;
-  --background: #e9ebe6;
-  --foreground: #111411;
-  --card: #f4f5f1;
-  --card-foreground: #111411;
-  --surface: #f1f2ee;
-  --surface-secondary: #e5e8e2;
-  --surface-tertiary: #daddd6;
-  --primary: #527d08;
-  --primary-foreground: #ffffff;
-  --primary-bright: #a8ef32;
-  --secondary: #dfe3dc;
-  --secondary-foreground: #111411;
-  --muted: #dfe3dc;
-  --muted-foreground: #4b554c;
-  --accent: #527d08;
-  --accent-foreground: #ffffff;
-  --border: #1720172e;
-  --input: #17201735;
-  --ring: #527d08;
-  --overlay: rgba(15, 20, 15, 0.55);
-  --text-primary: #111411;
-  --text-secondary: #343b35;
-  --text-muted: #505951;
-  --text-subtle: #697169;
-  --success: #527d08;
-  --radius: 0.8rem;
-}
-
-/* =========================================================
-   TAILWIND TOKENS
-   ========================================================= */
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --radius-lg: var(--radius);
-  --font-sans: Arial, Helvetica, sans-serif;
-  --font-serif: Georgia, "Times New Roman", serif;
-}
-
-/* =========================================================
-   BASE
-   ========================================================= */
-
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; background: var(--background); }
-body { margin: 0; min-height: 100vh; background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; transition: background-color 180ms ease, color 180ms ease; }
-button, select { cursor: pointer; }
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
-select { color-scheme: inherit; }
-
-/* =========================================================
-   GLOBAL APP COMPONENT HELPERS
-   ========================================================= */
-
-.app-background { background: var(--background); color: var(--foreground); }
-.app-surface { background: var(--surface); color: var(--foreground); }
-.app-card { background: var(--card); color: var(--card-foreground); border-color: var(--border); }
-.app-border { border-color: var(--border); }
-.app-text { color: var(--text-primary); }
-.app-text-secondary { color: var(--text-secondary); }
-.app-text-muted { color: var(--text-muted); }
-.app-text-subtle { color: var(--text-subtle); }
-.app-input { background: var(--surface-secondary); border-color: var(--border); color: var(--foreground); }
-.app-overlay { background: var(--overlay); }
-
-/* Pending sales now lives in the seller hamburger menu. Hide the legacy catalog CTA. */
-main > div.mx-auto.max-w-7xl a[href="/pending-sales"] { display: none !important; }
-
-/* =========================================================
-   TEMPORARY LEGACY COLOR BRIDGE
-   ========================================================= */
-
-[data-theme="light"] .bg-\[\#0b0e0d\] { background-color: var(--background) !important; }
-[data-theme="light"] .bg-\[\#101411\] { background-color: var(--surface) !important; }
-[data-theme="light"] .text-\[\#f4f3ed\] { color: var(--foreground) !important; }
-[data-theme="light"] .text-white\/30 { color: var(--text-subtle) !important; }
-[data-theme="light"] .text-white\/35,
-[data-theme="light"] .text-white\/40,
-[data-theme="light"] .text-white\/45 { color: var(--text-muted) !important; }
-[data-theme="light"] .text-white\/50,
-[data-theme="light"] .text-white\/55,
-[data-theme="light"] .text-white\/60,
-[data-theme="light"] .text-white\/65 { color: var(--text-secondary) !important; }
-[data-theme="light"] .text-white { color: var(--foreground) !important; }
-[data-theme="light"] .border-white\/10 { border-color: var(--border) !important; }
-[data-theme="light"] .bg-white\/\[\.025\],
-[data-theme="light"] .bg-white\/\[\.035\],
-[data-theme="light"] .bg-white\/\[\.04\],
-[data-theme="light"] .bg-white\/\[\.05\],
-[data-theme="light"] .bg-white\/\[\.06\] { background-color: var(--surface-secondary) !important; }
-[data-theme="light"] .bg-black\/15,
-[data-theme="light"] .bg-black\/20 { background-color: var(--surface-secondary) !important; }
-[data-theme="light"] input,
-[data-theme="light"] textarea,
-[data-theme="light"] select { color: var(--foreground); }
-
-/* =========================================================
-   LIGHT MODE CONTRAST FIX
-   ========================================================= */
-
-[data-theme="light"] { color: var(--foreground); }
-[data-theme="light"] .text-white { color: #111411 !important; }
-[data-theme="light"] .text-white\/30,
-[data-theme="light"] .text-white\/35,
-[data-theme="light"] .text-white\/40 { color: #697169 !important; }
-[data-theme="light"] .text-white\/45,
-[data-theme="light"] .text-white\/50,
-[data-theme="light"] .text-white\/55 { color: #505951 !important; }
-[data-theme="light"] .text-white\/60,
-[data-theme="light"] .text-white\/65 { color: #343b35 !important; }
-[data-theme="light"] .text-\[\#b9f54a\] { color: #527d08 !important; }
-[data-theme="light"] .bg-\[\#b9f54a\] { background-color: #a8ef32 !important; }
-[data-theme="light"] .bg-\[\#b9f54a\].text-\[\#11150d\] { color: #11150d !important; }
-[data-theme="light"] .bg-\[\#b9f54a\]\/\[\.04\],
-[data-theme="light"] .bg-\[\#b9f54a\]\/\[\.06\] { background-color: rgba(82, 125, 8, 0.08) !important; }
-[data-theme="light"] .text-amber-100,
-[data-theme="light"] .text-amber-200,
-[data-theme="light"] .text-amber-300 { color: #805700 !important; }
-[data-theme="light"] .bg-amber-300\/\[\.04\],
-[data-theme="light"] .bg-amber-300\/\[\.05\],
-[data-theme="light"] .bg-amber-300\/\[\.06\] { background-color: rgba(128, 87, 0, 0.07) !important; }
-
-/* =========================================================
-   BINDER INVENTORY — MOBILE CARD V2
-   Desktop keeps the existing grid. On phones the selector,
-   image and identity share the first row; pricing gets a
-   dedicated two-column footer for faster scanning.
-   ========================================================= */
-
-@media (max-width: 767px) {
-  main section.mt-5 article.grid {
-    grid-template-columns: 28px 64px minmax(0, 1fr) !important;
-    gap: 0.75rem !important;
-    align-items: center;
-    padding: 0 !important;
-  }
-
-  main section.mt-5 article.grid > button:first-child {
-    grid-column: 1;
-    grid-row: 1;
-    align-self: center;
-    justify-self: center;
-    margin-left: 0.75rem;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(2) {
-    grid-column: 2;
-    grid-row: 1;
-    width: 56px;
-    height: 80px;
-    margin: 1rem 0;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(3) {
-    grid-column: 3;
-    grid-row: 1;
-    min-width: 0;
-    padding: 1rem 0.9rem 1rem 0;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(3) h2 {
-    white-space: normal;
-    line-height: 1.25;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(3) p {
-    font-size: 0.78rem;
-    line-height: 1.35;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(3) > div {
-    gap: 0.35rem;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(3) span {
-    padding: 0.22rem 0.5rem;
-    white-space: nowrap;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(4) {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 1rem;
-    min-width: 0;
-    width: 100%;
-    padding: 0.8rem 1rem 0.9rem;
-    border-top: 1px solid var(--border);
-    text-align: left !important;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(1),
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(2) {
-    grid-column: 1;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(3),
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(4) {
-    grid-column: 2;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(1),
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(3) {
-    grid-row: 1;
-    margin-top: 0 !important;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(2),
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(4) {
-    grid-row: 2;
-    margin-top: 0.3rem !important;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(3),
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(4) {
-    padding-left: 1rem;
-    border-left: 1px solid var(--border);
-  }
-
-  main section.mt-5 article.grid > div:nth-child(4) > p:nth-of-type(4) {
-    font-size: 1.05rem;
-  }
-
-  main section.mt-5 article.grid > div:nth-child(4) > div {
-    grid-column: 2;
-    justify-content: flex-start !important;
-    padding-left: 1rem;
-    border-left: 1px solid var(--border);
-  }
-}
+@media(max-width:767px){main section.mt-5 article.grid{grid-template-columns:28px 64px minmax(0,1fr)!important;gap:.75rem!important;align-items:center;padding:0!important}main section.mt-5 article.grid>button:first-child{grid-column:1;grid-row:1;align-self:center;justify-self:center;margin-left:.75rem}main section.mt-5 article.grid>div:nth-child(2){grid-column:2;grid-row:1;width:56px;height:80px;margin:1rem 0}main section.mt-5 article.grid>div:nth-child(3){grid-column:3;grid-row:1;min-width:0;padding:1rem .9rem 1rem 0}main section.mt-5 article.grid>div:nth-child(3) h2{white-space:normal;line-height:1.25}main section.mt-5 article.grid>div:nth-child(3) p{font-size:.78rem;line-height:1.35}main section.mt-5 article.grid>div:nth-child(3)>div{gap:.35rem}main section.mt-5 article.grid>div:nth-child(3) span{padding:.22rem .5rem;white-space:nowrap}main section.mt-5 article.grid>div:nth-child(4){grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:1rem;min-width:0;width:100%;padding:.8rem 1rem .9rem;border-top:1px solid var(--border);text-align:left!important}main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(1),main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(2){grid-column:1}main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(3),main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(4){grid-column:2}main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(1),main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(3){grid-row:1;margin-top:0!important}main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(2),main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(4){grid-row:2;margin-top:.3rem!important}main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(3),main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(4){padding-left:1rem;border-left:1px solid var(--border)}main section.mt-5 article.grid>div:nth-child(4)>p:nth-of-type(4){font-size:1.05rem}main section.mt-5 article.grid>div:nth-child(4)>div{grid-column:2;justify-content:flex-start!important;padding-left:1rem;border-left:1px solid var(--border)}main:has(a[href="#cards"])::before{background-size:36px 36px;opacity:.14}main:has(a[href="#cards"])>section:first-of-type::after{width:260px;height:260px;right:-150px;bottom:-120px}}
