@@ -20,93 +20,93 @@
   pointer-events: none;
 }
 
-/* Regular foil: a restrained spectrum that lets the original artwork dominate. */
+/* Regular foil: clearly visible spectrum without washing out the original artwork. */
 .mtg-card-finish-overlay.is-foil {
   background:
     linear-gradient(125deg,
-      rgba(255, 70, 165, .18),
-      rgba(125, 110, 255, .13) 20%,
-      rgba(65, 220, 255, .18) 40%,
-      rgba(110, 255, 180, .13) 59%,
-      rgba(255, 235, 90, .16) 78%,
-      rgba(255, 90, 155, .14));
-  background-size: 260% 260%;
-  mix-blend-mode: soft-light;
-  opacity: .42;
-  animation: mtg-foil-spectrum 9s ease-in-out infinite alternate;
+      rgba(255, 55, 160, .30),
+      rgba(120, 95, 255, .24) 20%,
+      rgba(45, 220, 255, .31) 40%,
+      rgba(100, 255, 175, .25) 59%,
+      rgba(255, 235, 70, .28) 78%,
+      rgba(255, 80, 150, .26));
+  background-size: 250% 250%;
+  mix-blend-mode: screen;
+  opacity: .62;
+  animation: mtg-foil-spectrum 6.8s ease-in-out infinite alternate;
 }
 
 .mtg-card-finish-overlay.is-foil::after {
-  inset: -48%;
+  inset: -46%;
   background: linear-gradient(108deg,
-    transparent 38%,
-    rgba(255,255,255,.025) 44%,
-    rgba(255,255,255,.30) 49%,
-    rgba(190,240,255,.12) 53%,
-    transparent 60%);
+    transparent 36%,
+    rgba(255,255,255,.045) 42%,
+    rgba(255,255,255,.54) 49%,
+    rgba(175,235,255,.23) 53%,
+    transparent 61%);
   mix-blend-mode: screen;
-  animation: mtg-foil-sweep 8.5s ease-in-out infinite;
+  animation: mtg-foil-sweep 6.4s ease-in-out infinite;
 }
 
-/* Surge foil: directional bands remain recognizable, but no longer overpower the art. */
+/* Surge foil: stronger directional bands, visibly distinct from regular foil. */
 .mtg-card-finish-overlay.is-surgefoil {
   background:
     repeating-linear-gradient(122deg,
-      transparent 0 7%,
-      rgba(60, 220, 255, .22) 9%,
-      rgba(255, 80, 205, .24) 12%,
-      rgba(255, 235, 95, .19) 15%,
-      transparent 19% 28%);
-  background-size: 210% 210%;
-  mix-blend-mode: soft-light;
-  opacity: .58;
-  animation: mtg-surge-spectrum 6.2s ease-in-out infinite;
+      transparent 0 6%,
+      rgba(45, 215, 255, .36) 8%,
+      rgba(255, 65, 205, .40) 11%,
+      rgba(255, 235, 80, .32) 14%,
+      transparent 18% 26%);
+  background-size: 200% 200%;
+  mix-blend-mode: screen;
+  opacity: .72;
+  animation: mtg-surge-spectrum 4.8s ease-in-out infinite;
 }
 
 .mtg-card-finish-overlay.is-surgefoil::after {
-  inset: -44%;
+  inset: -42%;
   background: linear-gradient(104deg,
-    transparent 35%,
-    rgba(255,255,255,.035) 42%,
-    rgba(255,255,255,.40) 49%,
-    rgba(120,225,255,.16) 53%,
-    transparent 60%);
+    transparent 33%,
+    rgba(255,255,255,.055) 40%,
+    rgba(255,255,255,.62) 48%,
+    rgba(100,220,255,.28) 53%,
+    transparent 61%);
   mix-blend-mode: screen;
-  animation: mtg-surge-sweep 5.6s ease-in-out infinite;
+  animation: mtg-surge-sweep 4.5s ease-in-out infinite;
 }
 
 @keyframes mtg-foil-spectrum {
-  from { background-position: 8% 20%; }
-  to { background-position: 92% 80%; }
+  from { background-position: 4% 18%; }
+  to { background-position: 96% 82%; }
 }
 
 @keyframes mtg-foil-sweep {
-  0%, 28% { transform: translate3d(-48%,0,0) rotate(2deg); opacity: 0; }
-  42% { opacity: .18; }
-  53% { opacity: .62; }
-  64% { opacity: .15; }
-  76%, 100% { transform: translate3d(48%,0,0) rotate(-2deg); opacity: 0; }
+  0%, 20% { transform: translate3d(-46%,0,0) rotate(2deg); opacity: .04; }
+  39% { opacity: .30; }
+  52% { opacity: .82; }
+  66% { opacity: .26; }
+  82%, 100% { transform: translate3d(46%,0,0) rotate(-2deg); opacity: .04; }
 }
 
 @keyframes mtg-surge-spectrum {
-  from { background-position: 5% 22%; }
-  to { background-position: 95% 78%; }
+  from { background-position: 2% 18%; }
+  to { background-position: 98% 82%; }
 }
 
 @keyframes mtg-surge-sweep {
-  0%, 22% { transform: translate3d(-48%,0,0) skewX(-5deg); opacity: 0; }
-  40% { opacity: .20; }
-  52% { opacity: .72; }
-  66% { opacity: .18; }
-  80%, 100% { transform: translate3d(48%,0,0) skewX(4deg); opacity: 0; }
+  0%, 16% { transform: translate3d(-46%,0,0) skewX(-5deg); opacity: .06; }
+  37% { opacity: .34; }
+  51% { opacity: .88; }
+  67% { opacity: .30; }
+  84%, 100% { transform: translate3d(46%,0,0) skewX(4deg); opacity: .06; }
 }
 
-/* On touch devices the finish stays calm and avoids constant visual noise. */
+/* Touch devices keep the same visible finish, only slowing movement slightly. */
 @media (hover: none) {
-  .mtg-card-finish-overlay.is-foil { animation-duration: 11s; }
-  .mtg-card-finish-overlay.is-foil::after { animation-duration: 10s; }
-  .mtg-card-finish-overlay.is-surgefoil { animation-duration: 7.8s; }
-  .mtg-card-finish-overlay.is-surgefoil::after { animation-duration: 7s; }
+  .mtg-card-finish-overlay.is-foil { animation-duration: 7.8s; }
+  .mtg-card-finish-overlay.is-foil::after { animation-duration: 7.4s; }
+  .mtg-card-finish-overlay.is-surgefoil { animation-duration: 5.7s; }
+  .mtg-card-finish-overlay.is-surgefoil::after { animation-duration: 5.4s; }
 }
 
 @media (prefers-reduced-motion: reduce) {
