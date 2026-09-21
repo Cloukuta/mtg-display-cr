@@ -41,15 +41,23 @@ const aliases = {
   finish: ["finish", "foil"],
 } as const;
 
+const SCRYFALL_BATCH_SIZE = 5;
+const SCRYFALL_BATCH_DELAY_MS = 250;
+const SCRYFALL_MAX_ATTEMPTS = 3;
+const SCRYFALL_RETRY_BASE_MS = 400;
+
 function value(record: Record<string, string>, candidates: readonly string[]) {
   const key = Object.keys(record).find((item) => candidates.includes(item.trim().toLowerCase()));
   return key ? String(record[key] ?? "").trim() : "";
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function normalizeCondition(condition: string) {
   const normalized = condition.trim().toLowerCase();
   const conditions: Record<string, string> = {
-    // Card Kingdom-compatible inventory grades.
     "near mint": "NM", nm: "NM",
     excellent: "EX", ex: "EX", "lightly played": "EX", lp: "EX",
     "very good": "VG", vg: "VG", "moderately played": "VG", mp: "VG", played: "VG", pl: "VG",
@@ -110,13 +118,34 @@ function detectSpecialFinish(card: Record<string, any>, sourceFinish: string) {
   const promoTypes = Array.isArray(card.promo_types)
     ? card.promo_types.map((value: unknown) => String(value).trim().toLowerCase().replace(/[-_\s]/g, ""))
     : [];
-
-  // Scryfall represents Surge Foil as printing metadata rather than as one of
-  // the ordinary finishes. Moxfield therefore exports these cards as "foil".
-  // The exact Scryfall printing is authoritative for this special treatment.
   if (promoTypes.includes("surgefoil")) return "surgefoil";
-
   return sourceFinish;
+}
+
+function isRetryableStatus(status: number) {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+async function fetchScryfallWithRetry(url: string) {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= SCRYFALL_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json;q=0.9,*/*;q=0.8" } });
+      if (response.ok) return response;
+      if (response.status === 404) throw new Error("Printing not found");
+      if (!isRetryableStatus(response.status)) throw new Error(`Scryfall returned ${response.status}`);
+      lastError = new Error(`Scryfall returned ${response.status}`);
+    } catch (error) {
+      const normalized = error instanceof Error ? error : new Error("Scryfall request failed");
+      if (normalized.message === "Printing not found" || normalized.message.startsWith("Scryfall returned 4")) throw normalized;
+      lastError = normalized;
+    }
+
+    if (attempt < SCRYFALL_MAX_ATTEMPTS) await wait(SCRYFALL_RETRY_BASE_MS * 2 ** (attempt - 1));
+  }
+
+  throw new Error(`Scryfall temporarily unavailable after ${SCRYFALL_MAX_ATTEMPTS} attempts: ${lastError?.message || "request failed"}`);
 }
 
 export async function resolveWithScryfall(row: MoxfieldRow): Promise<ResolvedCard> {
@@ -127,12 +156,7 @@ export async function resolveWithScryfall(row: MoxfieldRow): Promise<ResolvedCar
   if (!url) return { ...row, status: "unresolved", error: "Card name or printing details are missing." };
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        Accept: "application/json;q=0.9,*/*;q=0.8",
-      },
-    });
-    if (!response.ok) throw new Error(response.status === 404 ? "Printing not found" : `Scryfall returned ${response.status}`);
+    const response = await fetchScryfallWithRetry(url);
     const result = await response.json();
     const sourceFinish = row.finish;
     const detectedFinish = detectSpecialFinish(result, sourceFinish);
@@ -161,12 +185,11 @@ export async function resolveWithScryfall(row: MoxfieldRow): Promise<ResolvedCar
 
 export async function resolveBatch(rows: MoxfieldRow[], onProgress?: (done: number) => void) {
   const output: ResolvedCard[] = [];
-  for (let index = 0; index < rows.length; index += 10) {
-    const batch = await Promise.all(rows.slice(index, index + 10).map(resolveWithScryfall));
+  for (let index = 0; index < rows.length; index += SCRYFALL_BATCH_SIZE) {
+    const batch = await Promise.all(rows.slice(index, index + SCRYFALL_BATCH_SIZE).map(resolveWithScryfall));
     output.push(...batch);
     onProgress?.(Math.min(index + batch.length, rows.length));
-    if (index + 10 < rows.length) await new Promise((resolve) => setTimeout(resolve, 120));
+    if (index + SCRYFALL_BATCH_SIZE < rows.length) await wait(SCRYFALL_BATCH_DELAY_MS);
   }
   return output;
 }
-
