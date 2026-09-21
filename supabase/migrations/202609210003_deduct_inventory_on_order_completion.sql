@@ -76,7 +76,7 @@ begin
     payment_confirmed_at=case when p_action='confirm_payment' then now() else payment_confirmed_at end,
     shipped_at=case when p_action='mark_shipped' then now() else shipped_at end,
     completed_at=case when p_action='confirm_received' then now() else completed_at end,
-    response_required_from=case when p_action='confirm_payment' then 'seller' when p_action='mark_shipped' then 'buyer' when p_action='confirm_received' then null else response_required_from end,
+    response_required_from=case when p_action='confirm_payment' then 'buyer' when p_action='mark_shipped' then 'buyer' when p_action='confirm_received' then null else response_required_from end,
     response_required_at=case when p_action in ('confirm_payment','mark_shipped') then now() when p_action='confirm_received' then null else response_required_at end,
     updated_at=now()
   where id=p_order_id;
