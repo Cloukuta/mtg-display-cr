@@ -1,4 +1,5 @@
--- Deduct sold inventory atomically when the seller confirms shipment/delivery.
+-- Deduct sold inventory atomically only after the seller confirms the buyer's payment.
+-- At that point the prepared delivery has been paid and leaves seller inventory.
 -- Buyer receipt confirmation only closes the order.
 -- Fixes #82.
 
@@ -25,14 +26,9 @@ begin
     when 'confirm_payment' then
       if v_role<>'seller' or v_order.status<>'payment_submitted' then raise exception 'INVALID_ORDER_ACTION'; end if;
       if not exists(select 1 from public.order_attachments a where a.order_id=p_order_id and a.uploaded_by=v_order.buyer_id and a.attachment_type='payment_proof') then raise exception 'PAYMENT_PROOF_REQUIRED'; end if;
-      v_new_status:='paid'; v_event_type:='payment_confirmed'; v_message:='Seller confirmed payment. Order is ready to be shipped.';
 
-    when 'mark_shipped' then
-      if v_role<>'seller' or v_order.status<>'paid' then raise exception 'INVALID_ORDER_ACTION'; end if;
-      if not exists(select 1 from public.order_attachments a where a.order_id=p_order_id and a.uploaded_by=v_order.seller_id and a.attachment_type='shipment_proof') then raise exception 'SHIPMENT_PROOF_REQUIRED'; end if;
-
-      -- Once the seller hands over / ships the cards, they are no longer seller inventory.
-      -- Lock and validate every affected row before changing any quantity.
+      -- Payment confirmation is the point at which the prepared/sent cards
+      -- permanently leave the seller's sellable inventory.
       for v_item in
         select oi.inventory_item_id, sum(oi.quantity)::integer as sold_quantity
         from public.order_items oi
@@ -47,7 +43,6 @@ begin
         if v_inventory.quantity<v_item.sold_quantity then raise exception 'INSUFFICIENT_INVENTORY'; end if;
       end loop;
 
-      -- All rows validated: deduct stock in this same transaction.
       for v_item in
         select oi.inventory_item_id, sum(oi.quantity)::integer as sold_quantity
         from public.order_items oi
@@ -62,11 +57,17 @@ begin
         where id=v_item.inventory_item_id;
       end loop;
 
-      v_new_status:='shipped'; v_event_type:='order_shipped'; v_message:='Seller confirmed shipment/delivery. Sold inventory was deducted.';
+      v_new_status:='paid'; v_event_type:='payment_confirmed'; v_message:='Seller confirmed payment. Sold inventory was deducted.';
+
+    when 'mark_shipped' then
+      if v_role<>'seller' or v_order.status<>'paid' then raise exception 'INVALID_ORDER_ACTION'; end if;
+      if not exists(select 1 from public.order_attachments a where a.order_id=p_order_id and a.uploaded_by=v_order.seller_id and a.attachment_type='shipment_proof') then raise exception 'SHIPMENT_PROOF_REQUIRED'; end if;
+      -- No inventory mutation here: stock was deducted only after confirmed payment.
+      v_new_status:='shipped'; v_event_type:='order_shipped'; v_message:='Seller marked the paid order as shipped/delivered.';
 
     when 'confirm_received' then
       if v_role<>'buyer' or v_order.status<>'shipped' then raise exception 'INVALID_ORDER_ACTION'; end if;
-      -- Inventory was already deducted when the seller shipped/delivered the order.
+      -- No inventory mutation here: buyer receipt only closes the transaction.
       v_new_status:='completed'; v_event_type:='order_completed'; v_message:='Buyer confirmed receipt. Order completed.';
     else raise exception 'UNKNOWN_ORDER_ACTION';
   end case;
