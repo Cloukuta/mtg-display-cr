@@ -25,7 +25,7 @@ function installEvidenceCompression(supabase: SupabaseClient) {
       if (!(body instanceof File)) return originalUpload(path, body, options);
       try {
         const compressed = await compressEvidenceImage(body);
-        return originalUpload(path.replace(/\.[^.\/]+$/, ".webp"), compressed, {
+        return originalUpload(path, compressed, {
           ...options,
           contentType: compressed.type,
         });
