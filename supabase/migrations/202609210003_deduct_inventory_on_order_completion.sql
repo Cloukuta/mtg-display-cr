@@ -1,4 +1,5 @@
--- Deduct sold inventory atomically when the buyer confirms receipt.
+-- Deduct sold inventory atomically when the seller confirms shipment/delivery.
+-- Buyer receipt confirmation only closes the order.
 -- Fixes #82.
 
 create or replace function public.advance_order_status(p_order_id bigint,p_action text)
@@ -29,12 +30,9 @@ begin
     when 'mark_shipped' then
       if v_role<>'seller' or v_order.status<>'paid' then raise exception 'INVALID_ORDER_ACTION'; end if;
       if not exists(select 1 from public.order_attachments a where a.order_id=p_order_id and a.uploaded_by=v_order.seller_id and a.attachment_type='shipment_proof') then raise exception 'SHIPMENT_PROOF_REQUIRED'; end if;
-      v_new_status:='shipped'; v_event_type:='order_shipped'; v_message:='Seller marked the order as shipped.';
 
-    when 'confirm_received' then
-      if v_role<>'buyer' or v_order.status<>'shipped' then raise exception 'INVALID_ORDER_ACTION'; end if;
-
-      -- Lock and validate every linked inventory row before changing any quantity.
+      -- Once the seller hands over / ships the cards, they are no longer seller inventory.
+      -- Lock and validate every affected row before changing any quantity.
       for v_item in
         select oi.inventory_item_id, sum(oi.quantity)::integer as sold_quantity
         from public.order_items oi
@@ -49,7 +47,7 @@ begin
         if v_inventory.quantity<v_item.sold_quantity then raise exception 'INSUFFICIENT_INVENTORY'; end if;
       end loop;
 
-      -- All rows validated: apply deductions inside this same transaction.
+      -- All rows validated: deduct stock in this same transaction.
       for v_item in
         select oi.inventory_item_id, sum(oi.quantity)::integer as sold_quantity
         from public.order_items oi
@@ -64,7 +62,12 @@ begin
         where id=v_item.inventory_item_id;
       end loop;
 
-      v_new_status:='completed'; v_event_type:='order_completed'; v_message:='Buyer confirmed receipt. Order completed and sold inventory deducted.';
+      v_new_status:='shipped'; v_event_type:='order_shipped'; v_message:='Seller confirmed shipment/delivery. Sold inventory was deducted.';
+
+    when 'confirm_received' then
+      if v_role<>'buyer' or v_order.status<>'shipped' then raise exception 'INVALID_ORDER_ACTION'; end if;
+      -- Inventory was already deducted when the seller shipped/delivered the order.
+      v_new_status:='completed'; v_event_type:='order_completed'; v_message:='Buyer confirmed receipt. Order completed.';
     else raise exception 'UNKNOWN_ORDER_ACTION';
   end case;
 
