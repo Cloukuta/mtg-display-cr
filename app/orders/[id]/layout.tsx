@@ -31,6 +31,17 @@ export default function OrderLayout({children}:{children:React.ReactNode}){
     const stored=localStorage.getItem(LANGUAGE_STORAGE_KEY);
     if(stored==="es"||stored==="en")setLang(stored);
     void checkReview();
+
+    const openReview=(event:Event)=>{
+      const detail=(event as CustomEvent<{orderId:number}>).detail;
+      if(detail?.orderId===Number(id)){
+        setSubmitted(false);
+        setError("");
+        setShow(true);
+      }
+    };
+    window.addEventListener("mtg:order-received",openReview);
+    return()=>window.removeEventListener("mtg:order-received",openReview);
   },[id]);
 
   async function checkReview(){
