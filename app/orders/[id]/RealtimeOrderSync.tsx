@@ -7,13 +7,10 @@ import {getSupabase} from "@/lib/supabase";
 type Health="connecting"|"connected"|"reconnecting"|"error";
 
 /**
- * Order Room realtime safety net.
- *
- * We intentionally subscribe without server-side row filters and validate the
- * order id from each payload in the browser. This avoids a filtered-channel
- * edge case that could leave an apparently subscribed room without receiving
- * mutations. Supabase remains the source of truth: a matching remote mutation
- * triggers a short debounced reload of the current room.
+ * Order Room realtime transport.
+ * Broadcast is the primary low-latency invalidation path. Postgres Changes is
+ * retained as a fallback. Postgres remains the source of truth: receiving a
+ * signal reloads the room rather than trusting event payload data.
  */
 export default function RealtimeOrderSync(){
   const {id}=useParams<{id:string}>();
@@ -30,18 +27,19 @@ export default function RealtimeOrderSync(){
     let channel:ReturnType<typeof s.channel>|null=null;
     let attempts=0;
 
-    const belongsToOrder=(payload:any,table:string)=>{
-      const row=payload?.new&&Object.keys(payload.new).length?payload.new:payload?.old;
-      const value=table==="orders"?row?.id:row?.order_id;
-      return Number(value)===orderId;
+    const reload=()=>{
+      if(!active)return;
+      if(reloadTimer.current)clearTimeout(reloadTimer.current);
+      reloadTimer.current=setTimeout(()=>{if(active)window.location.reload()},100);
     };
 
-    const sync=(payload:any,table:string)=>{
-      if(!active||!belongsToOrder(payload,table))return;
-      if(reloadTimer.current)clearTimeout(reloadTimer.current);
-      reloadTimer.current=setTimeout(()=>{
-        if(active)window.location.reload();
-      },120);
+    const belongsToOrder=(payload:any,table:string)=>{
+      const row=payload?.new&&Object.keys(payload.new).length?payload.new:payload?.old;
+      return Number(table==="orders"?row?.id:row?.order_id)===orderId;
+    };
+
+    const postgresSync=(payload:any,table:string)=>{
+      if(belongsToOrder(payload,table))reload();
     };
 
     const cleanupChannel=()=>{
@@ -53,17 +51,22 @@ export default function RealtimeOrderSync(){
       cleanupChannel();
       setHealth(attempts?"reconnecting":"connecting");
 
-      channel=s.channel(`order-room-live-${orderId}-${crypto.randomUUID()}`)
-        .on("postgres_changes",{event:"*",schema:"public",table:"orders"},payload=>sync(payload,"orders"))
-        .on("postgres_changes",{event:"*",schema:"public",table:"order_messages"},payload=>sync(payload,"order_messages"))
-        .on("postgres_changes",{event:"*",schema:"public",table:"order_attachments"},payload=>sync(payload,"order_attachments"))
-        .on("postgres_changes",{event:"*",schema:"public",table:"order_events"},payload=>sync(payload,"order_events"))
-        .on("postgres_changes",{event:"*",schema:"public",table:"order_items"},payload=>sync(payload,"order_items"))
+      // Stable topic is intentional: both authenticated participants in the
+      // same order must join the exact same Broadcast room.
+      channel=s.channel(`order-room-${orderId}`,{config:{broadcast:{self:false}}})
+        .on("broadcast",{event:"invalidate"},()=>reload())
+        .on("postgres_changes",{event:"*",schema:"public",table:"orders"},payload=>postgresSync(payload,"orders"))
+        .on("postgres_changes",{event:"*",schema:"public",table:"order_messages"},payload=>postgresSync(payload,"order_messages"))
+        .on("postgres_changes",{event:"*",schema:"public",table:"order_attachments"},payload=>postgresSync(payload,"order_attachments"))
+        .on("postgres_changes",{event:"*",schema:"public",table:"order_events"},payload=>postgresSync(payload,"order_events"))
+        .on("postgres_changes",{event:"*",schema:"public",table:"order_items"},payload=>postgresSync(payload,"order_items"))
         .subscribe(status=>{
           if(!active)return;
           if(status==="SUBSCRIBED"){
             attempts=0;
             setHealth("connected");
+            const announce=()=>void channel?.send({type:"broadcast",event:"invalidate",payload:{orderId,reason:"joined"}});
+            announce();
             return;
           }
           if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
@@ -75,18 +78,23 @@ export default function RealtimeOrderSync(){
             reconnectTimer.current=setTimeout(connect,delay);
           }
         });
+
+      const onInvalidate=()=>{
+        if(!active||!channel)return;
+        void channel.send({type:"broadcast",event:"invalidate",payload:{orderId,reason:"local-mutation",at:Date.now()}});
+      };
+      window.addEventListener("mtg:order-room-invalidate",onInvalidate);
+      return onInvalidate;
     };
 
-    connect();
-
-    const onVisible=()=>{
-      if(document.visibilityState==="visible"&&health!=="connected")connect();
-    };
+    const invalidateListener=connect();
+    const onVisible=()=>{if(document.visibilityState==="visible"&&health!=="connected")connect()};
     document.addEventListener("visibilitychange",onVisible);
 
     return()=>{
       active=false;
       document.removeEventListener("visibilitychange",onVisible);
+      if(invalidateListener)window.removeEventListener("mtg:order-room-invalidate",invalidateListener);
       if(reconnectTimer.current)clearTimeout(reconnectTimer.current);
       if(reloadTimer.current)clearTimeout(reloadTimer.current);
       cleanupChannel();
