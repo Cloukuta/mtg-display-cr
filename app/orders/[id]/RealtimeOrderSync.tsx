@@ -11,6 +11,10 @@ type Health="connecting"|"connected"|"reconnecting"|"error";
  * Broadcast is the primary low-latency invalidation path. Postgres Changes is
  * retained as a fallback. Postgres remains the source of truth: receiving a
  * signal reloads the room rather than trusting event payload data.
+ *
+ * Important: subscribing must never emit an invalidation. A reload creates a
+ * new subscription, so broadcasting on SUBSCRIBED makes two open participants
+ * continuously reload each other.
  */
 export default function RealtimeOrderSync(){
   const {id}=useParams<{id:string}>();
@@ -30,7 +34,7 @@ export default function RealtimeOrderSync(){
     const reload=()=>{
       if(!active)return;
       if(reloadTimer.current)clearTimeout(reloadTimer.current);
-      reloadTimer.current=setTimeout(()=>{if(active)window.location.reload()},100);
+      reloadTimer.current=setTimeout(()=>{if(active)window.location.reload()},150);
     };
 
     const belongsToOrder=(payload:any,table:string)=>{
@@ -51,8 +55,6 @@ export default function RealtimeOrderSync(){
       cleanupChannel();
       setHealth(attempts?"reconnecting":"connecting");
 
-      // Stable topic is intentional: both authenticated participants in the
-      // same order must join the exact same Broadcast room.
       channel=s.channel(`order-room-${orderId}`,{config:{broadcast:{self:false}}})
         .on("broadcast",{event:"invalidate"},()=>reload())
         .on("postgres_changes",{event:"*",schema:"public",table:"orders"},payload=>postgresSync(payload,"orders"))
@@ -65,8 +67,6 @@ export default function RealtimeOrderSync(){
           if(status==="SUBSCRIBED"){
             attempts=0;
             setHealth("connected");
-            const announce=()=>void channel?.send({type:"broadcast",event:"invalidate",payload:{orderId,reason:"joined"}});
-            announce();
             return;
           }
           if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED"){
@@ -78,23 +78,12 @@ export default function RealtimeOrderSync(){
             reconnectTimer.current=setTimeout(connect,delay);
           }
         });
-
-      const onInvalidate=()=>{
-        if(!active||!channel)return;
-        void channel.send({type:"broadcast",event:"invalidate",payload:{orderId,reason:"local-mutation",at:Date.now()}});
-      };
-      window.addEventListener("mtg:order-room-invalidate",onInvalidate);
-      return onInvalidate;
     };
 
-    const invalidateListener=connect();
-    const onVisible=()=>{if(document.visibilityState==="visible"&&health!=="connected")connect()};
-    document.addEventListener("visibilitychange",onVisible);
+    connect();
 
     return()=>{
       active=false;
-      document.removeEventListener("visibilitychange",onVisible);
-      if(invalidateListener)window.removeEventListener("mtg:order-room-invalidate",invalidateListener);
       if(reconnectTimer.current)clearTimeout(reconnectTimer.current);
       if(reloadTimer.current)clearTimeout(reloadTimer.current);
       cleanupChannel();
