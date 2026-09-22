@@ -8,19 +8,15 @@ type Health="connecting"|"connected"|"reconnecting"|"error";
 
 /**
  * Order Room realtime transport.
- * Broadcast is the primary low-latency invalidation path. Postgres Changes is
- * retained as a fallback. Postgres remains the source of truth: receiving a
- * signal reloads the room rather than trusting event payload data.
- *
- * Important: subscribing must never emit an invalidation. A reload creates a
- * new subscription, so broadcasting on SUBSCRIBED makes two open participants
- * continuously reload each other.
+ * Realtime only signals that persisted data changed. The Order Room owns the
+ * actual fetch and applies it silently, so the visible page is never replaced
+ * by a loading screen after the initial load.
  */
 export default function RealtimeOrderSync(){
   const {id}=useParams<{id:string}>();
   const [health,setHealth]=useState<Health>("connecting");
   const reconnectTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
-  const reloadTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const syncTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
 
   useEffect(()=>{
     const s=getSupabase();
@@ -31,10 +27,12 @@ export default function RealtimeOrderSync(){
     let channel:ReturnType<typeof s.channel>|null=null;
     let attempts=0;
 
-    const reload=()=>{
+    const sync=()=>{
       if(!active)return;
-      if(reloadTimer.current)clearTimeout(reloadTimer.current);
-      reloadTimer.current=setTimeout(()=>{if(active)window.location.reload()},150);
+      if(syncTimer.current)clearTimeout(syncTimer.current);
+      syncTimer.current=setTimeout(()=>{
+        if(active)window.dispatchEvent(new CustomEvent("mtg:order-room-sync",{detail:{orderId}}));
+      },120);
     };
 
     const belongsToOrder=(payload:any,table:string)=>{
@@ -43,7 +41,7 @@ export default function RealtimeOrderSync(){
     };
 
     const postgresSync=(payload:any,table:string)=>{
-      if(belongsToOrder(payload,table))reload();
+      if(belongsToOrder(payload,table))sync();
     };
 
     const cleanupChannel=()=>{
@@ -56,7 +54,7 @@ export default function RealtimeOrderSync(){
       setHealth(attempts?"reconnecting":"connecting");
 
       channel=s.channel(`order-room-${orderId}`,{config:{broadcast:{self:false}}})
-        .on("broadcast",{event:"invalidate"},()=>reload())
+        .on("broadcast",{event:"invalidate"},()=>sync())
         .on("postgres_changes",{event:"*",schema:"public",table:"orders"},payload=>postgresSync(payload,"orders"))
         .on("postgres_changes",{event:"*",schema:"public",table:"order_messages"},payload=>postgresSync(payload,"order_messages"))
         .on("postgres_changes",{event:"*",schema:"public",table:"order_attachments"},payload=>postgresSync(payload,"order_attachments"))
@@ -85,7 +83,7 @@ export default function RealtimeOrderSync(){
     return()=>{
       active=false;
       if(reconnectTimer.current)clearTimeout(reconnectTimer.current);
-      if(reloadTimer.current)clearTimeout(reloadTimer.current);
+      if(syncTimer.current)clearTimeout(syncTimer.current);
       cleanupChannel();
     };
   },[id]);
