@@ -8,6 +8,7 @@ import AppMenu from "@/components/AppMenu";
 import BrandLogo from "@/components/BrandLogo";
 import PendingSalesTestButton from "@/components/PendingSalesTestButton";
 import CatalogInventoryEditor from "@/components/CatalogInventoryEditor";
+import NotificationsBell from "@/components/NotificationsBell";
 
 import { getSupabase } from "@/lib/supabase";
 
@@ -59,6 +60,7 @@ export default function AppHeader({ currentPath = "" }: AppHeaderProps) {
           <div className="flex items-center gap-2">
             {currentPath === "/pending-sales" && <PendingSalesTestButton />}
             {currentPath === "/catalog" && pathname === "/catalog/binders" && <CatalogInventoryEditor />}
+            <NotificationsBell />
             <button type="button" onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen} className="relative flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
               <Menu size={19} />
               <span className="hidden sm:inline">Menu</span>
