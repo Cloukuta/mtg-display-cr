@@ -3,12 +3,12 @@ self.addEventListener("notificationclick",event=>{event.notification.close();con
 
 // Order messages are written directly to Supabase from the authenticated order room.
 // Observe only successful order_messages inserts and asynchronously ask our server-side
-// push endpoint to notify the other participant. The original chat request is returned
-// immediately; push delivery never blocks or breaks message sending.
+// push endpoint to notify the other participant. Push delivery never blocks chat sending.
 self.addEventListener("fetch",event=>{
  const request=event.request;
  let url;try{url=new URL(request.url)}catch{return}
  if(request.method!=="POST"||!url.pathname.includes("/rest/v1/order_messages"))return;
+ const requestClone=request.clone();
  event.respondWith((async()=>{
   const response=await fetch(request);
   if(!response.ok)return response;
@@ -16,9 +16,10 @@ self.addEventListener("fetch",event=>{
   const authorization=request.headers.get("authorization");
   if(authorization?.startsWith("Bearer ")){
    event.waitUntil((async()=>{try{
-    const data=await responseClone.json();
+    const [data,requestBody]=await Promise.all([responseClone.json(),requestClone.json()]);
     const row=Array.isArray(data)?data[0]:data;
-    const messageId=Number(row?.id),orderId=Number(row?.order_id);
+    const body=Array.isArray(requestBody)?requestBody[0]:requestBody;
+    const messageId=Number(row?.id),orderId=Number(body?.order_id);
     if(Number.isInteger(messageId)&&Number.isInteger(orderId))await fetch("/api/push/order-message",{method:"POST",headers:{"content-type":"application/json",authorization},body:JSON.stringify({orderId,messageId})});
    }catch{}})());
   }
