@@ -75,13 +75,15 @@ def fetch_cardkingdom_pricelist():
 
 
 def finish_for_product(product):
-    # CK does not expose a dedicated finish enum. Etched is encoded in the
-    # product variation/URL while is_foil remains true. Use those explicit CK
-    # signals before falling back to the ordinary foil/nonfoil flag.
+    # CK does not expose a dedicated finish enum. Special finishes are encoded
+    # in variation/URL/SKU while is_foil remains true, so prefer explicit CK
+    # signals before falling back to ordinary foil/nonfoil.
     variation = str(product.get("variation") or "").strip().lower()
     url = str(product.get("url") or "").strip().lower()
     sku = str(product.get("sku") or "").strip().upper()
 
+    if "surge foil" in variation or "surge-foil" in url:
+        return "surgefoil"
     if "foil etched" in variation or "foil-etched" in url or sku.startswith("DFE"):
         return "etched"
 
@@ -204,14 +206,14 @@ def sync(prices):
     for finish in ("nonfoil","foil","etched","surgefoil"):
         print(f"  {finish}: {finish_counts.get(finish, 0):,}")
     print(f"Legacy CK normal NM prices updated: {normal_count:,}"); print(f"Legacy CK foil NM prices updated:   {foil_count:,}")
-    print("Card Kingdom etched prices are synchronized when CK explicitly identifies Foil Etched. Surgefoil remains unchanged until CK exposes a reliable signal.")
+    print("Card Kingdom etched and surge foil prices are synchronized when CK explicitly identifies those finishes.")
 
 
 def print_validation(prices):
     sid="09ecd919-6f99-47fd-8242-b0b062e98b45"
     if sid not in prices: print("Validation case The Irencrag: no direct CK match"); return
     print("Validation case: The Irencrag"); print(f"  Scryfall ID: {sid}")
-    for finish in ("nonfoil","foil","etched"):
+    for finish in ("nonfoil","foil","etched","surgefoil"):
         values=prices[sid].get(finish,{}); print(f"  {finish}:")
         for condition in ("NM","EX","VG","G"): print(f"    {condition}: {values.get(condition)}")
 
