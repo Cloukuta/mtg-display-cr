@@ -40,6 +40,40 @@ function installEvidenceCompression(supabase: SupabaseClient) {
   storage.__evidenceCompressionInstalled = true;
 }
 
+async function supabaseFetchWithOrderPush(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, init);
+  if (typeof window === "undefined") return response;
+
+  try {
+    const requestUrl = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (init?.method?.toUpperCase() !== "POST" || !new URL(requestUrl).pathname.includes("/rest/v1/order_messages") || !response.ok) return response;
+
+    const requestBody = typeof init.body === "string" ? JSON.parse(init.body) : null;
+    const responseBody = await response.clone().json();
+    const row = Array.isArray(responseBody) ? responseBody[0] : responseBody;
+    const body = Array.isArray(requestBody) ? requestBody[0] : requestBody;
+    const messageId = Number(row?.id);
+    const orderId = Number(body?.order_id);
+    if (!Number.isInteger(messageId) || !Number.isInteger(orderId)) return response;
+
+    const headers = new Headers(init.headers);
+    const authorization = headers.get("authorization");
+    if (!authorization?.startsWith("Bearer ")) return response;
+
+    void fetch("/api/push/order-message", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization },
+      body: JSON.stringify({ orderId, messageId }),
+    }).then(async pushResponse => {
+      if (!pushResponse.ok) console.error("Order message push failed", pushResponse.status, await pushResponse.text());
+    }).catch(error => console.error("Order message push failed", error));
+  } catch (error) {
+    console.error("Order message push trigger failed", error);
+  }
+
+  return response;
+}
+
 export function getSupabase() {
   if (!isSupabaseConfigured()) return null;
 
@@ -52,6 +86,9 @@ export function getSupabase() {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
+        },
+        global: {
+          fetch: supabaseFetchWithOrderPush,
         },
       }
     );
