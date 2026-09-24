@@ -1,28 +1,42 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { getSupabase } from "@/lib/supabase";
 
 /**
  * Bridge Global Catalog / seller-comparison links into the existing public
  * display filters without exposing the Scryfall UUID in the search field.
  *
- * The catalog passes ?card=<scryfall_id>. We resolve that stable printing ID
- * to its human-readable name + set, then drive the existing controlled search
- * and set inputs. The public display remains the single source of truth for
- * inventory/cart behavior.
+ * When a catalog link contains ?card=<scryfall_id>, keep the public display
+ * behind a lightweight branded loading state until the existing controlled
+ * filters have received the resolved card name + exact set. This prevents the
+ * full seller inventory from flashing briefly before the selected card appears.
  */
 export default function SellerDisplayLayout({ children }: { children: ReactNode }) {
+  const [resolvingCatalogCard, setResolvingCatalogCard] = useState(false);
+
   useEffect(() => {
     const scryfallId = new URLSearchParams(window.location.search).get("card")?.trim();
     if (!scryfallId) return;
 
+    setResolvingCatalogCard(true);
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | null = null;
 
+    const finish = () => {
+      if (!cancelled) setResolvingCatalogCard(false);
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+
     void (async () => {
       const supabase = getSupabase();
-      if (!supabase) return;
+      if (!supabase) {
+        finish();
+        return;
+      }
 
       const { data } = await supabase
         .from("cards")
@@ -30,7 +44,11 @@ export default function SellerDisplayLayout({ children }: { children: ReactNode 
         .eq("scryfall_id", scryfallId)
         .maybeSingle();
 
-      if (cancelled || !data) return;
+      if (cancelled) return;
+      if (!data) {
+        finish();
+        return;
+      }
 
       let attempts = 0;
       timer = setInterval(() => {
@@ -63,9 +81,13 @@ export default function SellerDisplayLayout({ children }: { children: ReactNode 
           selectSetter?.call(setSelect, String(data.set_code).toLowerCase());
           setSelect.dispatchEvent(new Event("change", { bubbles: true }));
 
-          if (timer) clearInterval(timer);
-        } else if (attempts >= 40 && timer) {
-          clearInterval(timer);
+          // Give React one paint to commit both controlled filter updates before
+          // revealing the display, so the unfiltered inventory never flashes.
+          requestAnimationFrame(() => requestAnimationFrame(finish));
+        } else if (attempts >= 40) {
+          // Never trap the customer on the loading state if the filter UI cannot
+          // be resolved for an unexpected reason.
+          finish();
         }
       }, 100);
     })();
@@ -76,5 +98,28 @@ export default function SellerDisplayLayout({ children }: { children: ReactNode 
     };
   }, []);
 
-  return children;
+  return (
+    <>
+      <div
+        aria-hidden={resolvingCatalogCard ? undefined : true}
+        className={
+          resolvingCatalogCard
+            ? "fixed inset-0 z-[100] grid place-items-center bg-background"
+            : "pointer-events-none fixed inset-0 z-[100] hidden"
+        }
+      >
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src="/favicon.svg"
+            alt=""
+            className="h-16 w-16 animate-spin sm:h-20 sm:w-20"
+          />
+          <div className="h-1 w-24 overflow-hidden rounded-full bg-border">
+            <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />
+          </div>
+        </div>
+      </div>
+      <div className={resolvingCatalogCard ? "invisible" : undefined}>{children}</div>
+    </>
+  );
 }
