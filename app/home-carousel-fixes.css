@@ -1,4 +1,5 @@
-/* Home page: overflow:hidden on the marketplace main created a scroll container,
-   which prevented AppHeader's position:sticky from following the viewport.
-   overflow:clip preserves the decorative crop without becoming a sticky ancestor. */
-main:has(a[href="#cards"]){overflow:clip}
+/* Home page layout rules must use a stable page-level hook.
+   The #cards section is permanently mounted on Home, unlike carousel content.
+   Never infer Home from a[href="#cards"] because that link exists only on
+   slide 1 and made these rules disappear when slides 2 or 3 became active. */
+main:has(> section#cards){overflow:clip}
