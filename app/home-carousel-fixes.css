@@ -1,5 +1,5 @@
 /* Home page layout rules must use a stable page-level hook.
-   Never infer that this is the Home page from carousel content such as
-   a[href="#cards"], because that link exists only on slide 1 and caused
-   the page background/layout rules to switch off on slides 2 and 3. */
-main.mtg-home-page{overflow:clip}
+   The #cards section is permanently mounted on Home, unlike carousel content.
+   Never infer Home from a[href="#cards"] because that link exists only on
+   slide 1 and made these rules disappear when slides 2 or 3 became active. */
+main:has(> section#cards){overflow:clip}
