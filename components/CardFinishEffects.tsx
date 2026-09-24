@@ -3,40 +3,52 @@
 import { useEffect } from "react";
 
 function normalizeFinish(value: string) {
-  return value.trim().toLowerCase().replace(/[ _-]+/g, "");
+  const finish = value.trim().toLowerCase().replace(/[ _-]+/g, "");
+  if (finish === "normal") return "nonfoil";
+  return finish;
 }
 
-function finishFromArticle(article: Element) {
-  const explicit = article.getAttribute("data-card-finish");
+function finishFromCard(card: Element) {
+  const explicit = card.getAttribute("data-card-finish");
   if (explicit) return normalizeFinish(explicit);
 
-  const text = article.textContent || "";
+  const text = card.textContent || "";
   if (/surge[\s_-]*foil/i.test(text)) return "surgefoil";
+  if (/etched[\s_-]*foil|\betched\b/i.test(text)) return "etched";
   if (/\bfoil\b/i.test(text) && !/non[\s_-]*foil/i.test(text)) return "foil";
   return "nonfoil";
 }
 
+function decorateFinishLabel(card: Element, finish: string) {
+  card.querySelectorAll("span").forEach((span) => {
+    const value = normalizeFinish(span.textContent || "");
+    if (!["nonfoil", "foil", "surgefoil", "etched"].includes(value)) return;
+    span.classList.remove("text-muted-foreground", "text-violet-400", "text-fuchsia-400", "text-purple-300", "font-semibold");
+    span.classList.add("mtg-finish-label");
+    if (value === "foil") span.classList.add("text-violet-400");
+    else if (value === "surgefoil") span.classList.add("font-semibold", "text-fuchsia-400");
+    else if (value === "etched") span.classList.add("text-purple-300");
+    else span.classList.add("text-muted-foreground");
+  });
+
+  card.setAttribute("data-card-finish", finish);
+}
+
 /**
- * Adds a dedicated optical layer directly over card artwork.
- *
- * This deliberately does not rely on pseudo-elements attached to whatever
- * layout wrapper happens to contain the image. The overlay is inserted next
- * to the artwork and sized from the image itself, so the effect survives the
- * different Binder and storefront layouts.
- *
- * Renderers can opt into the preferred deterministic path by writing
- * `data-card-finish` on the article. The text fallback remains only for older
- * renderers while they are migrated.
+ * Adds the same optical finish treatment everywhere cards are rendered.
+ * Public storefronts use <article>; home/global catalog cards are links, so
+ * both renderers are supported. Explicit data-card-finish remains preferred,
+ * while the text fallback keeps older card renderers compatible.
  */
 export default function CardFinishEffects() {
   useEffect(() => {
     const decorate = () => {
-      document.querySelectorAll("article").forEach((article) => {
-        const finish = finishFromArticle(article);
-        article.setAttribute("data-card-finish", finish);
-
-        const image = article.querySelector("img");
+      document.querySelectorAll("article, a").forEach((card) => {
+        const image = card.querySelector("img");
         if (!(image instanceof HTMLImageElement)) return;
+
+        const finish = finishFromCard(card);
+        decorateFinishLabel(card, finish);
 
         const host = image.parentElement;
         if (!(host instanceof HTMLElement)) return;
