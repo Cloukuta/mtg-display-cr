@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import InventoryEditModal from "@/components/InventoryEditModal";
+import ManualCardAddModal from "@/components/ManualCardAddModal";
 import { getSupabase } from "@/lib/supabase";
 import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY, type Language } from "@/lib/i18n";
 
@@ -154,5 +155,5 @@ section.sticky[class*="top-[76px]"]{
   justify-content:flex-start!important;
  }
 }
-`}</style>{notice&&<div className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-2xl">{notice}</div>}<InventoryEditModal open={index>=0} item={item} binders={binders} language={language} hasPrevious={index>0} hasNext={index>=0&&index<items.length-1} onClose={()=>setIndex(-1)} onPrevious={()=>setIndex(i=>Math.max(0,i-1))} onNext={()=>setIndex(i=>Math.min(items.length-1,i+1))} onSave={save} onCreateBinder={createBinder}/></>
+`}</style>{notice&&<div className="fixed bottom-4 left-1/2 z-[100] -translate-x-1/2 rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-2xl">{notice}</div>}<ManualCardAddModal binderId={selectedBinderId} language={language} onAdded={()=>window.location.reload()}/><InventoryEditModal open={index>=0} item={item} binders={binders} language={language} hasPrevious={index>0} hasNext={index>=0&&index<items.length-1} onClose={()=>setIndex(-1)} onPrevious={()=>setIndex(i=>Math.max(0,i-1))} onNext={()=>setIndex(i=>Math.min(items.length-1,i+1))} onSave={save} onCreateBinder={createBinder}/></>
 }
