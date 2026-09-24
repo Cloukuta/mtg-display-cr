@@ -1,0 +1,4 @@
+/* Home page: overflow:hidden on the marketplace main created a scroll container,
+   which prevented AppHeader's position:sticky from following the viewport.
+   overflow:clip preserves the decorative crop without becoming a sticky ancestor. */
+main:has(a[href="#cards"]){overflow:clip}
