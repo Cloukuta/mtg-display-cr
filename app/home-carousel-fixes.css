@@ -1,4 +1,5 @@
-/* Home page: overflow:hidden on the marketplace main created a scroll container,
-   which prevented AppHeader's position:sticky from following the viewport.
-   overflow:clip preserves the decorative crop without becoming a sticky ancestor. */
-main:has(a[href="#cards"]){overflow:clip}
+/* Home page layout rules must use a stable page-level hook.
+   Never infer that this is the Home page from carousel content such as
+   a[href="#cards"], because that link exists only on slide 1 and caused
+   the page background/layout rules to switch off on slides 2 and 3. */
+main.mtg-home-page{overflow:clip}
