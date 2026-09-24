@@ -14,8 +14,8 @@ declare
   v_seller_id uuid;
   v_target uuid;
   v_type text := 'order_update';
-  v_title text := 'Actualización de pedido';
-  v_body text := 'Tu pedido tiene una actualización.';
+  v_title text;
+  v_body text;
 begin
   if tg_table_name = 'orders' then
     v_order_id := nullif(to_jsonb(new)->>'id', '')::bigint;
@@ -40,8 +40,8 @@ begin
     if tg_op = 'INSERT' then
       v_target := v_seller_id;
       v_type := 'order_created';
-      v_title := 'Nuevo pedido';
-      v_body := 'Recibiste un nuevo pedido.';
+      v_title := 'Nuevo pedido #' || v_order_id::text;
+      v_body := 'Recibiste un nuevo pedido. Pedido #' || v_order_id::text || '.';
     else
       if new.response_required_from = 'seller' then
         v_target := v_seller_id;
@@ -50,9 +50,14 @@ begin
       else
         v_target := case when auth.uid() = v_seller_id then v_buyer_id else v_seller_id end;
       end if;
+
+      v_title := 'Pedido #' || v_order_id::text || ' actualizado';
+      v_body := 'El pedido #' || v_order_id::text || ' tiene una actualización.';
     end if;
   else
     v_target := case when auth.uid() = v_seller_id then v_buyer_id else v_seller_id end;
+    v_title := 'Pedido #' || v_order_id::text || ' actualizado';
+    v_body := 'El pedido #' || v_order_id::text || ' tiene una actualización.';
   end if;
 
   if v_target is not null then
