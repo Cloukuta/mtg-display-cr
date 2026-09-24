@@ -66,6 +66,8 @@ export default function LanguageSwitch({
   }, [onLanguageChange]);
 
   function changeLanguage(nextLanguage: Language) {
+    if (nextLanguage === language) return;
+
     setLanguage(nextLanguage);
 
     window.localStorage.setItem(
@@ -81,6 +83,15 @@ export default function LanguageSwitch({
         }
       )
     );
+
+    /*
+      Some legacy pages still read the language only when they mount. Reloading
+      after persisting + broadcasting keeps the language contract consistent on
+      every route while those pages are progressively migrated to live listeners.
+    */
+    window.requestAnimationFrame(() => {
+      window.location.reload();
+    });
   }
 
   return (
