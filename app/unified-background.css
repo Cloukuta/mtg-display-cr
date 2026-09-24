@@ -1,0 +1,21 @@
+/* MTG Display CR — unified A+B visual system.
+   One atmosphere for every route; pages and carousel slides do not own decoration. */
+.app-background.app-background--rings-right{position:fixed!important;inset:0!important;z-index:0!important;pointer-events:none!important;overflow:hidden!important;background:transparent!important}
+.app-background.app-background--rings-right::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(185,245,74,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(185,245,74,.018) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.85),rgba(0,0,0,.32) 62%,transparent)}
+.app-background__glow--one{width:72vw!important;height:64vh!important;right:-26vw!important;top:-8vh!important;filter:blur(18px)!important;background:radial-gradient(ellipse,rgba(185,245,74,.105),rgba(185,245,74,.025) 42%,transparent 70%)!important}
+.app-background__glow--two{width:62vw!important;height:54vh!important;left:-28vw!important;bottom:-20vh!important;filter:blur(22px)!important;background:radial-gradient(ellipse,rgba(100,79,164,.07),transparent 70%)!important}
+.app-background__ring{border-color:rgba(185,245,74,.105)!important;box-shadow:0 0 80px rgba(185,245,74,.015)}
+.app-background__ring--one{width:620px!important;height:620px!important;right:-250px!important;top:8vh!important}
+.app-background__ring--two{width:390px!important;height:390px!important;right:-115px!important;top:20vh!important}
+.app-background__diamond{width:230px!important;height:230px!important;left:-145px!important;top:64vh!important;border-color:rgba(185,245,74,.055)!important;box-shadow:0 0 90px rgba(185,245,74,.018)!important}
+
+/* Home is now one continuous surface. Override legacy page/section decoration. */
+main:has(a[href="#cards"]){background:transparent!important;overflow:clip!important}
+main:has(a[href="#cards"])::before,main:has(a[href="#cards"])>section:first-of-type::after{display:none!important}
+main:has(a[href="#cards"])>section,main:has(a[href="#cards"]) #cards{background:transparent!important}
+
+[data-theme="light"] .app-background.app-background--rings-right::before{background-image:linear-gradient(rgba(82,125,8,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(82,125,8,.025) 1px,transparent 1px)}
+[data-theme="light"] .app-background__glow--one{background:radial-gradient(ellipse,rgba(82,125,8,.10),rgba(82,125,8,.02) 42%,transparent 70%)!important}
+[data-theme="light"] .app-background__glow--two{background:radial-gradient(ellipse,rgba(101,85,145,.045),transparent 70%)!important}
+
+@media(max-width:767px){.app-background.app-background--rings-right::before{background-size:42px 42px;opacity:.72}.app-background__ring--one{width:360px!important;height:360px!important;right:-235px!important;top:12vh!important}.app-background__ring--two{width:230px!important;height:230px!important;right:-145px!important;top:21vh!important}.app-background__glow--one{width:125vw!important;height:45vh!important;right:-68vw!important;top:3vh!important}.app-background__diamond{width:140px!important;height:140px!important;left:-105px!important;top:70vh!important}}
