@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./home-carousel-fixes.css";
 import "./card-finishes.css";
 import CardFinishEffects from "@/components/CardFinishEffects";
 import PrivateRouteBoundary from "@/components/PrivateRouteBoundary";
