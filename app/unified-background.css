@@ -9,10 +9,18 @@
 .app-background__ring--two{width:390px!important;height:390px!important;right:-115px!important;top:20vh!important}
 .app-background__diamond{width:230px!important;height:230px!important;left:-145px!important;top:64vh!important;border-color:rgba(185,245,74,.055)!important;box-shadow:0 0 90px rgba(185,245,74,.018)!important}
 
-/* Home is now one continuous surface. Override legacy page/section decoration. */
-main:has(a[href="#cards"]){background:transparent!important;overflow:clip!important}
-main:has(a[href="#cards"])::before,main:has(a[href="#cards"])>section:first-of-type::after{display:none!important}
-main:has(a[href="#cards"])>section,main:has(a[href="#cards"]) #cards{background:transparent!important}
+/* Home is one continuous surface.
+   IMPORTANT: identify Home by the permanently mounted #cards section, never by
+   carousel content such as a[href="#cards"], which only exists on slide 1. */
+main:has(> section#cards){background:transparent!important;overflow:clip!important}
+main:has(> section#cards)::before,main:has(> section#cards)>section:first-of-type::after{display:none!important}
+main:has(> section#cards)>section,main:has(> section#cards) #cards{background:transparent!important}
+
+/* Discover search belongs to #cards and must never inherit slide-dependent
+   decoration/visibility. Keep its Lucide icon above the input on every slide. */
+main:has(> section#cards) #cards label{isolation:isolate}
+main:has(> section#cards) #cards label>svg{display:block!important;visibility:visible!important;opacity:1!important;z-index:2!important;pointer-events:none!important}
+main:has(> section#cards) #cards label>input{position:relative;z-index:1}
 
 [data-theme="light"] .app-background.app-background--rings-right::before{background-image:linear-gradient(rgba(82,125,8,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(82,125,8,.025) 1px,transparent 1px)}
 [data-theme="light"] .app-background__glow--one{background:radial-gradient(ellipse,rgba(82,125,8,.10),rgba(82,125,8,.02) 42%,transparent 70%)!important}
