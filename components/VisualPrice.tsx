@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect,useState} from "react";
+import {getRememberedMarketPriceUsd} from "@/lib/visual-pricing";
 
 type PricingMode="default"|"custom"|"discount";
 type PriceSource="cardkingdom"|"tcgplayer"|null;
@@ -33,7 +34,8 @@ export function PriceSourceBadge({source="cardkingdom",compact=false}:{source?:E
 
 export default function VisualPrice({priceCrc,pricingMode,referenceCrc=null,marketPriceUsd=null,discountPercent=null,pendingLabel="Precio pendiente",referenceLabel="Referencia",customLabel="Precio del vendedor",source="cardkingdom",compact=false,className=""}:Props){
   const hasReference=referenceCrc!=null&&referenceCrc>0;
-  const canFlip=marketPriceUsd!=null&&marketPriceUsd>0;
+  const effectiveMarketPriceUsd=marketPriceUsd??getRememberedMarketPriceUsd(priceCrc,referenceCrc,pricingMode);
+  const canFlip=effectiveMarketPriceUsd!=null&&effectiveMarketPriceUsd>0;
   const[showCrc,setShowCrc]=useState(false);
   const[hovered,setHovered]=useState(false);
 
@@ -52,7 +54,7 @@ export default function VisualPrice({priceCrc,pricingMode,referenceCrc=null,mark
     {isDiscount&&<div className="flex items-center gap-2 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span className="line-through decoration-1">{crc.format(referenceCrc!)}</span>{discountPercent!=null&&discountPercent>0&&<span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 font-bold text-emerald-500">-{Math.round(discountPercent)}%</span>}</div>}
     {isCustom&&hasReference&&<div className="flex items-center gap-1.5 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}: </span><span className="line-through decoration-1">{crc.format(referenceCrc!)}</span></div>}
     {!isDiscount&&!isCustom&&source&&<PriceSourceBadge source={source} compact={compact}/>} 
-    <div className="flex items-center gap-2"><strong className="text-base font-extrabold text-foreground">{crc.format(priceCrc)}</strong>{isCustom&&<span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{customLabel}</span>}</div>
+    <div className="flex items-center gap-2"><strong className="text-base font-extrabold text-primary">{crc.format(priceCrc)}</strong>{isCustom&&<span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{customLabel}</span>}</div>
   </div>;
 
   if(!canFlip)return <div className={className}>{crcFace}</div>;
@@ -60,7 +62,7 @@ export default function VisualPrice({priceCrc,pricingMode,referenceCrc=null,mark
     <span className={`relative block min-h-[3.25rem] min-w-[7rem] transition-transform duration-300 [transform-style:preserve-3d] motion-reduce:transition-none ${showCrc?"[transform:rotateX(180deg)]":""}`}>
       <span className="absolute inset-0 flex flex-col justify-center [backface-visibility:hidden]">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}</span></span>
-        <strong className="mt-0.5 text-base font-extrabold text-foreground">{usd.format(marketPriceUsd!)}</strong>
+        <strong className="mt-0.5 text-base font-extrabold text-foreground">{usd.format(effectiveMarketPriceUsd!)}</strong>
       </span>
       <span className="absolute inset-0 flex flex-col justify-center [backface-visibility:hidden] [transform:rotateX(180deg)]">{crcFace}</span>
     </span>
