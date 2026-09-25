@@ -1,6 +1,7 @@
 "use client";
 
-import {useEffect,useState} from "react";
+import {useEffect,useRef,useState} from "react";
+import {createPortal} from "react-dom";
 import {getRememberedMarketPriceUsd} from "@/lib/visual-pricing";
 
 type PricingMode="default"|"custom"|"discount";
@@ -38,6 +39,8 @@ export default function VisualPrice({priceCrc,pricingMode,referenceCrc=null,mark
   const canFlip=effectiveMarketPriceUsd!=null&&effectiveMarketPriceUsd>0;
   const[showCrc,setShowCrc]=useState(false);
   const[hovered,setHovered]=useState(false);
+  const[promoHost,setPromoHost]=useState<HTMLElement|null>(null);
+  const rootRef=useRef<HTMLElement|null>(null);
 
   useEffect(()=>{
     if(!canFlip)return;
@@ -47,21 +50,34 @@ export default function VisualPrice({priceCrc,pricingMode,referenceCrc=null,mark
     return()=>window.clearInterval(timer);
   },[canFlip,hovered]);
 
-  if(priceCrc==null)return <div className={`flex items-center gap-1.5 font-semibold text-muted-foreground ${className}`}>{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{pendingLabel}</span></div>;
-  const isDiscount=pricingMode==="discount"&&hasReference&&priceCrc<referenceCrc!;
+  const isDiscount=priceCrc!=null&&pricingMode==="discount"&&hasReference&&priceCrc<referenceCrc!;
   const isCustom=pricingMode==="custom";
   const discountValue=isDiscount&&discountPercent!=null&&discountPercent>0?Math.round(discountPercent):null;
+
+  useEffect(()=>{
+    if(discountValue==null){setPromoHost(null);return}
+    const root=rootRef.current;
+    if(!root)return;
+    const host=root.closest("article, a.group") as HTMLElement|null;
+    if(!host)return;
+    const previousPosition=host.style.position;
+    if(getComputedStyle(host).position==="static")host.style.position="relative";
+    setPromoHost(host);
+    return()=>{setPromoHost(null);host.style.position=previousPosition};
+  },[discountValue]);
+
+  const saleBadge=discountValue!=null&&promoHost?createPortal(<span className="pointer-events-none absolute right-2 top-2 z-30 rounded-md bg-emerald-500 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow-lg ring-1 ring-white/20">-{discountValue}% OFF</span>,promoHost):null;
+
+  if(priceCrc==null)return <div ref={el=>{rootRef.current=el}} className={`flex items-center gap-1.5 font-semibold text-muted-foreground ${className}`}>{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{pendingLabel}</span></div>;
   const labelRow=<span className="flex items-center gap-1.5 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}</span></span>;
-  const saleBadge=discountValue!=null?<span className="discount-promo-badge pointer-events-none absolute left-2 top-2 z-20 rounded-md bg-emerald-500 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow-lg ring-1 ring-white/20">-{discountValue}% OFF</span>:null;
   const crcFace=<div className="flex min-h-[3.25rem] flex-col justify-center">
     {isDiscount?<div className="flex items-center gap-2 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}</span><span className="line-through decoration-1">{crc.format(referenceCrc!)}</span>{discountValue!=null&&<span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 font-bold text-emerald-500">-{discountValue}%</span>}</div>:isCustom&&hasReference?<div className="flex items-center gap-1.5 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}</span><span className="line-through decoration-1">{crc.format(referenceCrc!)}</span></div>:labelRow}
     <div className="mt-0.5 flex items-center gap-2"><strong className="text-base font-extrabold leading-none text-primary">{crc.format(priceCrc)}</strong>{isCustom&&<span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{customLabel}</span>}</div>
   </div>;
 
-  const promoStyle=discountValue!=null?<style>{`.group:has(.discount-promo-badge),a:has(>div .discount-promo-badge),article:has(.discount-promo-badge){position:relative}`}</style>:null;
-  if(!canFlip)return <div className={className}>{saleBadge}{promoStyle}{crcFace}</div>;
-  return <button type="button" className={`block min-h-[3.25rem] cursor-pointer appearance-none bg-transparent p-0 text-left [perspective:700px] ${className}`} onClick={e=>{e.preventDefault();e.stopPropagation();setShowCrc(v=>!v)}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} aria-label="Alternar precio USD y CRC" title="Alternar USD / CRC">
-    {saleBadge}{promoStyle}
+  if(!canFlip)return <div ref={el=>{rootRef.current=el}} className={className}>{saleBadge}{crcFace}</div>;
+  return <button ref={el=>{rootRef.current=el}} type="button" className={`block min-h-[3.25rem] cursor-pointer appearance-none bg-transparent p-0 text-left [perspective:700px] ${className}`} onClick={e=>{e.preventDefault();e.stopPropagation();setShowCrc(v=>!v)}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} aria-label="Alternar precio USD y CRC" title="Alternar USD / CRC">
+    {saleBadge}
     <span className={`relative block min-h-[3.25rem] min-w-[7rem] transition-transform duration-300 [transform-style:preserve-3d] motion-reduce:transition-none ${showCrc?"[transform:rotateX(180deg)]":""}`}>
       <span className="absolute inset-0 flex min-h-[3.25rem] flex-col justify-center [backface-visibility:hidden]">
         <span className="flex items-center gap-2 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}</span>{discountValue!=null&&<span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 font-bold text-emerald-500">-{discountValue}%</span>}</span>
