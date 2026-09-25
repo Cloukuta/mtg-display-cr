@@ -50,21 +50,20 @@ export default function VisualPrice({priceCrc,pricingMode,referenceCrc=null,mark
   if(priceCrc==null)return <div className={`flex items-center gap-1.5 font-semibold text-muted-foreground ${className}`}>{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{pendingLabel}</span></div>;
   const isDiscount=pricingMode==="discount"&&hasReference&&priceCrc<referenceCrc!;
   const isCustom=pricingMode==="custom";
-  const crcFace=<div className={`flex ${compact?"items-center gap-2":"flex-col items-start gap-0.5"}`}>
-    {isDiscount&&<div className="flex items-center gap-2 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span className="line-through decoration-1">{crc.format(referenceCrc!)}</span>{discountPercent!=null&&discountPercent>0&&<span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 font-bold text-emerald-500">-{Math.round(discountPercent)}%</span>}</div>}
-    {isCustom&&hasReference&&<div className="flex items-center gap-1.5 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}: </span><span className="line-through decoration-1">{crc.format(referenceCrc!)}</span></div>}
-    {!isDiscount&&!isCustom&&source&&<PriceSourceBadge source={source} compact={compact}/>} 
-    <div className="flex items-center gap-2"><strong className="text-base font-extrabold text-primary">{crc.format(priceCrc)}</strong>{isCustom&&<span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{customLabel}</span>}</div>
+  const labelRow=<span className="flex items-center gap-1.5 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}</span></span>;
+  const crcFace=<div className="flex min-h-[3.25rem] flex-col justify-center">
+    {isDiscount?<div className="flex items-center gap-2 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}</span><span className="line-through decoration-1">{crc.format(referenceCrc!)}</span>{discountPercent!=null&&discountPercent>0&&<span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 font-bold text-emerald-500">-{Math.round(discountPercent)}%</span>}</div>:isCustom&&hasReference?<div className="flex items-center gap-1.5 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}</span><span className="line-through decoration-1">{crc.format(referenceCrc!)}</span></div>:labelRow}
+    <div className="mt-0.5 flex items-center gap-2"><strong className="text-base font-extrabold leading-none text-primary">{crc.format(priceCrc)}</strong>{isCustom&&<span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{customLabel}</span>}</div>
   </div>;
 
   if(!canFlip)return <div className={className}>{crcFace}</div>;
   return <button type="button" className={`block min-h-[3.25rem] cursor-pointer appearance-none bg-transparent p-0 text-left [perspective:700px] ${className}`} onClick={e=>{e.preventDefault();e.stopPropagation();setShowCrc(v=>!v)}} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} aria-label="Alternar precio USD y CRC" title="Alternar USD / CRC">
     <span className={`relative block min-h-[3.25rem] min-w-[7rem] transition-transform duration-300 [transform-style:preserve-3d] motion-reduce:transition-none ${showCrc?"[transform:rotateX(180deg)]":""}`}>
-      <span className="absolute inset-0 flex flex-col justify-center [backface-visibility:hidden]">
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}</span></span>
-        <strong className="mt-0.5 text-base font-extrabold text-foreground">{usd.format(effectiveMarketPriceUsd!)}</strong>
+      <span className="absolute inset-0 flex min-h-[3.25rem] flex-col justify-center [backface-visibility:hidden]">
+        {labelRow}
+        <strong className="mt-0.5 text-base font-extrabold leading-none text-primary">{usd.format(effectiveMarketPriceUsd!)}</strong>
       </span>
-      <span className="absolute inset-0 flex flex-col justify-center [backface-visibility:hidden] [transform:rotateX(180deg)]">{crcFace}</span>
+      <span className="absolute inset-0 flex min-h-[3.25rem] flex-col justify-center [backface-visibility:hidden] [transform:rotateX(180deg)]">{crcFace}</span>
     </span>
   </button>;
 }
