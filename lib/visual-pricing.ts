@@ -16,6 +16,16 @@ export type VisualPricingResult={
   source:PriceSource;
 };
 
+const resolvedUsdReferences=new Map<string,number>();
+function referenceKey(priceCrc:number|null,referenceCrc:number|null,pricingMode:PricingMode){return `${pricingMode}:${priceCrc??"null"}:${referenceCrc??"null"}`}
+export function rememberVisualPricing(result:VisualPricingResult,pricingMode:PricingMode){
+  if(result.marketPriceUsd!=null&&result.marketPriceUsd>0)resolvedUsdReferences.set(referenceKey(result.priceCrc,result.referenceCrc,pricingMode),result.marketPriceUsd);
+  return result;
+}
+export function getRememberedMarketPriceUsd(priceCrc:number|null,referenceCrc:number|null,pricingMode:PricingMode){
+  return resolvedUsdReferences.get(referenceKey(priceCrc,referenceCrc,pricingMode))??null;
+}
+
 export function normalizePricingFinish(value:string){
   const finish=value.trim().toLowerCase().replace(/[ _-]+/g,"");
   return finish==="normal"||finish==="nonfoil"?"nonfoil":finish;
@@ -44,13 +54,13 @@ export function resolveVisualPricing(input:{
   const referenceCrc=marketPriceUsd!=null?Math.round(marketPriceUsd*input.usdToCrc):null;
 
   if(input.pricingMode==="custom"){
-    return {priceCrc:input.customPriceCrc,referenceCrc,marketPriceUsd,discountPercent:null,source};
+    return rememberVisualPricing({priceCrc:input.customPriceCrc,referenceCrc,marketPriceUsd,discountPercent:null,source},input.pricingMode);
   }
   if(referenceCrc==null){
     return {priceCrc:null,referenceCrc:null,marketPriceUsd:null,discountPercent:input.pricingMode==="discount"?input.discountPercent:null,source};
   }
   if(input.pricingMode==="discount"){
-    return {priceCrc:Math.round(referenceCrc*(1-input.discountPercent/100)),referenceCrc,marketPriceUsd,discountPercent:input.discountPercent,source};
+    return rememberVisualPricing({priceCrc:Math.round(referenceCrc*(1-input.discountPercent/100)),referenceCrc,marketPriceUsd,discountPercent:input.discountPercent,source},input.pricingMode);
   }
-  return {priceCrc:referenceCrc,referenceCrc,marketPriceUsd,discountPercent:null,source};
+  return rememberVisualPricing({priceCrc:referenceCrc,referenceCrc,marketPriceUsd,discountPercent:null,source},input.pricingMode);
 }
