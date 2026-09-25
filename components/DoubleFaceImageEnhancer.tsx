@@ -45,11 +45,22 @@ function enhance(img:HTMLImageElement){
     const host=img.parentElement;if(!host)return;
     const old=host.querySelector<HTMLElement>(":scope > [data-dfc-toggle]");if(old)old.remove();
     if(getComputedStyle(host).position==="static")host.style.position="relative";
+    host.style.perspective="1000px";
+    img.style.transformStyle="preserve-3d";
+    img.style.backfaceVisibility="hidden";
+    img.style.transition="transform 180ms ease-in, opacity 180ms ease-in";
     const button=document.createElement("button");button.type="button";button.dataset.dfcToggle="1";button.setAttribute("aria-label","Ver reverso");button.title="Ver reverso";
     button.className="absolute bottom-2 left-1/2 z-20 inline-flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white/85 shadow-md backdrop-blur-[2px] transition hover:bg-black/55 hover:text-white";
     button.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>';
-    let back=false;
-    button.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();back=!back;img.src=back?info.back:info.front;button.setAttribute("aria-label",back?"Ver frente":"Ver reverso");button.title=back?"Ver frente":"Ver reverso"});
+    let back=false,animating=false;
+    button.addEventListener("click",e=>{
+      e.preventDefault();e.stopPropagation();if(animating)return;animating=true;
+      const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const swap=()=>{back=!back;img.src=back?info.back:info.front;button.setAttribute("aria-label",back?"Ver frente":"Ver reverso");button.title=back?"Ver frente":"Ver reverso"};
+      if(reduce){swap();animating=false;return}
+      img.style.transform="rotateY(-90deg)";img.style.opacity="0.72";
+      window.setTimeout(()=>{swap();img.style.transition="none";img.style.transform="rotateY(90deg)";void img.offsetWidth;img.style.transition="transform 180ms ease-out, opacity 180ms ease-out";img.style.transform="rotateY(0deg)";img.style.opacity="1";window.setTimeout(()=>{animating=false;img.style.transition="transform 180ms ease-in, opacity 180ms ease-in"},190)},180);
+    });
     host.appendChild(button);
   });
 }
