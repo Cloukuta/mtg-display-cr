@@ -1,0 +1,1 @@
+The promotional overlay is emitted by the shared `VisualPrice` component so existing Home, Global Catalog, and Seller Display integrations receive the restored sale treatment without duplicating pricing logic.
