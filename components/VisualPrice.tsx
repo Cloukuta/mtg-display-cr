@@ -52,7 +52,7 @@ export default function VisualPrice({priceCrc,pricingMode,referenceCrc=null,mark
     {isDiscount&&<div className="flex items-center gap-2 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span className="line-through decoration-1">{crc.format(referenceCrc!)}</span>{discountPercent!=null&&discountPercent>0&&<span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 font-bold text-emerald-500">-{Math.round(discountPercent)}%</span>}</div>}
     {isCustom&&hasReference&&<div className="flex items-center gap-1.5 text-xs text-muted-foreground">{source&&<PriceSourceBadge source={source} compact={compact}/>}<span>{referenceLabel}: </span><span className="line-through decoration-1">{crc.format(referenceCrc!)}</span></div>}
     {!isDiscount&&!isCustom&&source&&<PriceSourceBadge source={source} compact={compact}/>} 
-    <div className="flex items-center gap-2"><strong className="text-base font-extrabold text-foreground">{crc.format(priceCrc)}</strong>{isCustom&&<span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{customLabel}</span>}</div>
+    <div className="flex items-center gap-2"><strong className="text-base font-extrabold text-primary">{crc.format(priceCrc)}</strong>{isCustom&&<span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{customLabel}</span>}</div>
   </div>;
 
   if(!canFlip)return <div className={className}>{crcFace}</div>;
