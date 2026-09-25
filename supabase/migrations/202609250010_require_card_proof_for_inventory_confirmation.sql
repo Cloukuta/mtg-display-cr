@@ -1,5 +1,10 @@
 -- Order flow v3, step 1: seller must attach real-card evidence before
 -- confirming inventory or proposing quantity changes to the buyer.
+--
+-- During this first rollout slice the current order-room uploader still stores
+-- inventory-confirmation images as `other`. Accept that legacy/current value
+-- together with the final `card_proof` type so the backend requirement can be
+-- tested independently before the UI/type cleanup lands in the next slice.
 
 create or replace function public.propose_inventory_confirmation(p_order_id bigint,p_items jsonb)
 returns text language plpgsql security definer set search_path=public as $$
@@ -16,12 +21,13 @@ begin
   if p_items is null or jsonb_typeof(p_items)<>'array' then raise exception 'INVALID_ITEMS'; end if;
 
   -- The buyer must be able to review photos of the actual cards before the
-  -- order can leave inventory confirmation.
+  -- order can leave inventory confirmation. `other` is accepted temporarily
+  -- because that is what the existing uploader emits in this state.
   if not exists(
     select 1 from public.order_attachments a
     where a.order_id=p_order_id
       and a.uploaded_by=v_order.seller_id
-      and a.attachment_type='card_proof'
+      and a.attachment_type in ('card_proof','other')
   ) then raise exception 'CARD_PROOF_REQUIRED'; end if;
 
   for v_item in select * from jsonb_array_elements(p_items) loop
@@ -48,4 +54,4 @@ end;$$;
 grant execute on function public.propose_inventory_confirmation(bigint,jsonb) to authenticated;
 
 comment on function public.propose_inventory_confirmation(bigint,jsonb) is
-'Order flow v3: seller card_proof is mandatory before inventory confirmation or quantity-change proposal.';
+'Order flow v3 step 1: seller card evidence is mandatory before inventory confirmation or quantity-change proposal; legacy attachment type other is temporarily accepted during UI rollout.';
