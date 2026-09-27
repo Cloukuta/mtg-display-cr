@@ -53,8 +53,9 @@ export default function StoreIdentityEnhancer(){
             next.push({host,identity,compact:true});
           });
         }
-        const signature=next.map(({host,identity,compact})=>`${host.isConnected}:${host.dataset.storefrontIdentity?"storefront":"market"}:${identity.slug||identity.public_name}:${compact}`).join("|");
-        if(signature!==lastSignature){lastSignature=signature;setMounts(next)}
+        const connected=next.filter(({host})=>host.isConnected);
+        const signature=connected.map(({host,identity,compact})=>`${host.dataset.storefrontIdentity?"storefront":"market"}:${identity.slug||identity.public_name}:${compact}`).join("|");
+        if(signature!==lastSignature){lastSignature=signature;setMounts(connected)}
       };
 
       attach();
@@ -69,5 +70,5 @@ export default function StoreIdentityEnhancer(){
     };
   },[]);
 
-  return <>{mounts.filter(({host})=>host.isConnected).map(({host,identity,compact},index)=>createPortal(<StoreIdentityBadges sellerType={identity.seller_type} verificationStatus={identity.verification_status} compact={compact}/>,host,`${identity.slug||identity.public_name}-${index}`))}</>;
+  return <>{mounts.map(({host,identity,compact},index)=>createPortal(<StoreIdentityBadges sellerType={identity.seller_type} verificationStatus={identity.verification_status} compact={compact}/>,host,`${identity.slug||identity.public_name}-${index}`))}</>;
 }
