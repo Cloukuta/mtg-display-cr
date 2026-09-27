@@ -27,11 +27,12 @@ export default function SellerExplorer({sellers,es}:Props){
     if(!filtering)return randomOrder;
     const q=query.trim().toLowerCase();
     return sellers.filter(s=>{
-      const matchesQuery=!q||`${s.public_name||""} ${s.location||""}`.toLowerCase().includes(q);
+      const identityText=s.seller_type==="store"?`${es?"tienda":"store"} ${s.verification_status==="verified"?(es?"certificada":"certified"):""}`:"";
+      const matchesQuery=!q||`${s.public_name||""} ${s.location||""} ${identityText}`.toLowerCase().includes(q);
       const matchesLocation=location==="all"||s.location===location;
       return matchesQuery&&matchesLocation;
     }).sort((a,b)=>(a.public_name||"").localeCompare(b.public_name||""));
-  },[filtering,location,query,randomOrder,sellers]);
+  },[es,filtering,location,query,randomOrder,sellers]);
 
   // The home page uses four columns on desktop, so 12 cards = exactly three rows.
   const visible=filtered.slice(0,12);
@@ -40,7 +41,7 @@ export default function SellerExplorer({sellers,es}:Props){
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <label className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16}/>
-        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder={es?"Buscar vendedor o ubicación…":"Search seller or location…"} className="h-11 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm outline-none transition focus:border-primary"/>
+        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder={es?"Buscar vendedor, tienda o ubicación…":"Search seller, store or location…"} className="h-11 w-full rounded-xl border border-border bg-card pl-9 pr-3 text-sm outline-none transition focus:border-primary"/>
       </label>
       <select value={location} onChange={e=>setLocation(e.target.value)} className="h-11 rounded-xl border border-border bg-card px-3 text-sm font-semibold outline-none transition focus:border-primary">
         <option value="all">{es?"Todas las ubicaciones":"All locations"}</option>
