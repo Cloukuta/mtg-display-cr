@@ -23,7 +23,6 @@ export default function StoreIdentityEnhancer(){
       if(cancelled)return;
       const identities=(data||[]) as Identity[];
       const bySlug=new Map(identities.filter(x=>x.slug).map(x=>[x.slug!,x]));
-      const byName=new Map(identities.filter(x=>x.public_name).map(x=>[x.public_name!.trim(),x]));
 
       const attach=()=>{
         const next:Mount[]=[];
@@ -40,9 +39,10 @@ export default function StoreIdentityEnhancer(){
         }
 
         if(pathname==="/"){
-          document.querySelectorAll("a[href^='/v/']").forEach(link=>{
-            const sellerName=Array.from(link.querySelectorAll("p")).find(p=>p.className.includes("font-bold"))?.textContent?.trim();
-            const identity=sellerName?byName.get(sellerName):undefined;
+          document.querySelectorAll<HTMLAnchorElement>("a[href^='/v/']").forEach(link=>{
+            const href=link.getAttribute("href")||"";
+            const match=href.match(/^\/v\/([^/?#]+)/);
+            const identity=match?bySlug.get(decodeURIComponent(match[1])):undefined;
             if(!identity)return;
             const sellerBlock=Array.from(link.querySelectorAll("div")).find(div=>div.className.includes("border-t")&&div.className.includes("pt-3"));
             if(!sellerBlock)return;
