@@ -39,7 +39,7 @@ export default function StoreIdentityEnhancer(){
         }
 
         if(pathname==="/"){
-          document.querySelectorAll<HTMLAnchorElement>("a[href^='/v/']").forEach(link=>{
+          document.querySelectorAll<HTMLAnchorElement>("#cards a[href^='/v/']").forEach(link=>{
             const href=link.getAttribute("href")||"";
             const match=href.match(/^\/v\/([^/?#]+)/);
             const identity=match?bySlug.get(decodeURIComponent(match[1])):undefined;
