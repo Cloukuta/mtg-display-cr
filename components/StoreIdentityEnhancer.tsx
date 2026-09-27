@@ -33,7 +33,7 @@ export default function StoreIdentityEnhancer(){
           const identity=bySlug.get(decodeURIComponent(slugMatch[1]));
           const heading=Array.from(document.querySelectorAll("h1")).find(node=>node.textContent?.trim());
           if(identity&&heading){
-            let host=heading.parentElement?.querySelector<HTMLElement>("[data-storefront-identity]");
+            let host=document.querySelector<HTMLElement>("[data-storefront-identity]");
             if(!host){host=document.createElement("div");host.dataset.storefrontIdentity="1";host.className="mt-2";heading.insertAdjacentElement("afterend",host)}
             next.push({host,identity,compact:false});
           }
