@@ -14,7 +14,6 @@ export default function StoreIdentityEnhancer(){
   useEffect(()=>{
     let cancelled=false;
     let observer:MutationObserver|null=null;
-    const hosts:HTMLElement[]=[];
     const s=getSupabase();
     if(!s)return;
 
@@ -34,7 +33,7 @@ export default function StoreIdentityEnhancer(){
           const heading=Array.from(document.querySelectorAll("h1")).find(node=>node.textContent?.trim());
           if(identity&&heading){
             let host=heading.parentElement?.querySelector<HTMLElement>("[data-storefront-identity]");
-            if(!host){host=document.createElement("div");host.dataset.storefrontIdentity="1";host.className="mt-2";heading.insertAdjacentElement("afterend",host);hosts.push(host)}
+            if(!host){host=document.createElement("div");host.dataset.storefrontIdentity="1";host.className="mt-2";heading.insertAdjacentElement("afterend",host)}
             next.push({host,identity,compact:false});
           }
         }
@@ -47,7 +46,7 @@ export default function StoreIdentityEnhancer(){
             const sellerBlock=Array.from(link.querySelectorAll("div")).find(div=>div.className.includes("border-t")&&div.className.includes("pt-3"));
             if(!sellerBlock)return;
             let host=sellerBlock.querySelector<HTMLElement>("[data-marketplace-store-identity]");
-            if(!host){host=document.createElement("span");host.dataset.marketplaceStoreIdentity="1";host.className="ml-auto shrink-0";sellerBlock.appendChild(host);hosts.push(host)}
+            if(!host){host=document.createElement("span");host.dataset.marketplaceStoreIdentity="1";host.className="ml-auto shrink-0";sellerBlock.appendChild(host)}
             next.push({host,identity,compact:true});
           });
         }
@@ -59,7 +58,12 @@ export default function StoreIdentityEnhancer(){
       observer.observe(document.body,{childList:true,subtree:true});
     })();
 
-    return()=>{cancelled=true;observer?.disconnect();hosts.forEach(host=>host.remove());setMounts([])};
+    return()=>{
+      cancelled=true;
+      observer?.disconnect();
+      document.querySelectorAll("[data-storefront-identity],[data-marketplace-store-identity]").forEach(host=>host.remove());
+      setMounts([]);
+    };
   },[]);
 
   return <>{mounts.map(({host,identity,compact},index)=>createPortal(<StoreIdentityBadges sellerType={identity.seller_type} verificationStatus={identity.verification_status} compact={compact}/>,host,`${identity.slug||identity.public_name}-${index}`))}</>;
