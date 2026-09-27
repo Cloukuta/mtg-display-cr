@@ -64,7 +64,6 @@ export default function StoreIdentityEnhancer(){
       cancelled=true;
       observer?.disconnect();
       document.querySelectorAll("[data-storefront-identity],[data-marketplace-store-identity]").forEach(host=>host.remove());
-      setMounts([]);
     };
   },[]);
 
