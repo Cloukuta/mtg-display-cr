@@ -30,7 +30,7 @@ export default function StoreIdentityEnhancer(){
         const slugMatch=pathname.match(/^\/v\/([^/]+)/);
         if(slugMatch){
           const identity=bySlug.get(decodeURIComponent(slugMatch[1]));
-          const heading=Array.from(document.querySelectorAll("h1")).find(node=>node.textContent?.trim());
+          const heading=Array.from(document.querySelectorAll("main h1")).find(node=>node.textContent?.trim());
           if(identity&&heading){
             let host=document.querySelector<HTMLElement>("[data-storefront-identity]");
             if(!host){host=document.createElement("div");host.dataset.storefrontIdentity="1";host.className="mt-2";heading.insertAdjacentElement("afterend",host)}
