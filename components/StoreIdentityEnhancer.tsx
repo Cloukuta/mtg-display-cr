@@ -12,6 +12,8 @@ export default function StoreIdentityEnhancer(){
   const[mounts,setMounts]=useState<Mount[]>([]);
 
   useEffect(()=>{
+    const pathname=window.location.pathname;
+    if(pathname!=="/"&&!pathname.startsWith("/v/"))return;
     let cancelled=false;
     let observer:MutationObserver|null=null;
     let lastSignature="";
@@ -26,7 +28,6 @@ export default function StoreIdentityEnhancer(){
 
       const attach=()=>{
         const next:Mount[]=[];
-        const pathname=window.location.pathname;
         const slugMatch=pathname.match(/^\/v\/([^/]+)/);
         if(slugMatch){
           const identity=bySlug.get(decodeURIComponent(slugMatch[1]));
