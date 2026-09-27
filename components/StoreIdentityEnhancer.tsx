@@ -14,6 +14,7 @@ export default function StoreIdentityEnhancer(){
   useEffect(()=>{
     let cancelled=false;
     let observer:MutationObserver|null=null;
+    let lastSignature="";
     const s=getSupabase();
     if(!s)return;
 
@@ -50,7 +51,8 @@ export default function StoreIdentityEnhancer(){
             next.push({host,identity,compact:true});
           });
         }
-        setMounts(next);
+        const signature=next.map(({host,identity,compact})=>`${host.dataset.storefrontIdentity?"storefront":"market"}:${identity.slug||identity.public_name}:${compact}`).join("|");
+        if(signature!==lastSignature){lastSignature=signature;setMounts(next)}
       };
 
       attach();
