@@ -34,6 +34,7 @@ export default function StoreIdentityEnhancer(){
           const heading=Array.from(document.querySelectorAll("main h1")).find(node=>node.textContent?.trim());
           if(identity&&heading){
             let host=document.querySelector<HTMLElement>("[data-storefront-identity]");
+            if(host&&!host.isConnected)host=null;
             if(!host){host=document.createElement("div");host.dataset.storefrontIdentity="1";host.className="mt-2";heading.insertAdjacentElement("afterend",host)}
             next.push({host,identity,compact:false});
           }
@@ -52,7 +53,7 @@ export default function StoreIdentityEnhancer(){
             next.push({host,identity,compact:true});
           });
         }
-        const signature=next.map(({host,identity,compact})=>`${host.dataset.storefrontIdentity?"storefront":"market"}:${identity.slug||identity.public_name}:${compact}`).join("|");
+        const signature=next.map(({host,identity,compact})=>`${host.isConnected}:${host.dataset.storefrontIdentity?"storefront":"market"}:${identity.slug||identity.public_name}:${compact}`).join("|");
         if(signature!==lastSignature){lastSignature=signature;setMounts(next)}
       };
 
@@ -68,5 +69,5 @@ export default function StoreIdentityEnhancer(){
     };
   },[]);
 
-  return <>{mounts.map(({host,identity,compact},index)=>createPortal(<StoreIdentityBadges sellerType={identity.seller_type} verificationStatus={identity.verification_status} compact={compact}/>,host,`${identity.slug||identity.public_name}-${index}`))}</>;
+  return <>{mounts.filter(({host})=>host.isConnected).map(({host,identity,compact},index)=>createPortal(<StoreIdentityBadges sellerType={identity.seller_type} verificationStatus={identity.verification_status} compact={compact}/>,host,`${identity.slug||identity.public_name}-${index}`))}</>;
 }
