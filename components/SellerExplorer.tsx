@@ -2,8 +2,9 @@
 
 import {useMemo,useState} from "react";
 import {ArrowRight,MapPin,Search} from "lucide-react";
+import StoreIdentityBadges from "@/components/StoreIdentityBadges";
 
-type Seller={id:string;public_name:string|null;slug:string|null;location:string|null};
+type Seller={id:string;public_name:string|null;slug:string|null;location:string|null;seller_type:string|null;verification_status:string|null};
 
 type Props={sellers:Seller[];es:boolean};
 
@@ -52,6 +53,7 @@ export default function SellerExplorer({sellers,es}:Props){
         {visible.map(s=><a key={s.id} href={`/v/${s.slug}`} className="group rounded-3xl border border-border bg-card p-5 transition hover:border-primary/50">
           <div className="grid h-11 w-11 place-items-center rounded-2xl bg-primary/10 font-serif text-lg font-bold text-primary">{(s.public_name||"M").slice(0,2).toUpperCase()}</div>
           <h3 className="mt-5 font-semibold">{s.public_name||"Seller"}</h3>
+          <StoreIdentityBadges sellerType={s.seller_type} verificationStatus={s.verification_status} compact className="mt-2"/>
           <p className="mt-1 text-sm text-muted-foreground"><MapPin className="mr-1 inline" size={12}/>{s.location||"Costa Rica"}</p>
           <span className="mt-5 inline-flex items-center gap-1 text-sm font-bold text-primary">{es?"Ver vitrina":"View display"}<ArrowRight size={15}/></span>
         </a>)}
