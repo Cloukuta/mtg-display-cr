@@ -5,7 +5,7 @@ import {createPortal} from "react-dom";
 import SellerExplorer from "@/components/SellerExplorer";
 import {getSupabase} from "@/lib/supabase";
 
-type Seller={id:string;public_name:string|null;slug:string|null;location:string|null;seller_type:string|null;verification_status:string|null};
+type Seller={id:string;public_name:string|null;store_name:string|null;slug:string|null;location:string|null;seller_type:string|null;verification_status:string|null};
 
 export default function SellerDiscoveryEnhancer(){
   const[host,setHost]=useState<HTMLElement|null>(null);
@@ -47,7 +47,7 @@ export default function SellerDiscoveryEnhancer(){
     void(async()=>{
       const s=getSupabase();if(!s)return;
       const[{data:profiles},{data:inventory}]=await Promise.all([
-        s.from("profiles").select("id,public_name,slug,location,seller_type,verification_status").eq("published",true).not("slug","is",null),
+        s.from("profiles").select("id,public_name,store_name,slug,location,seller_type,verification_status").eq("published",true).not("slug","is",null),
         s.from("inventory_items").select("seller_id").eq("available",true).gt("quantity",0),
       ]);
       const active=new Set((inventory||[]).map(row=>String(row.seller_id)));
