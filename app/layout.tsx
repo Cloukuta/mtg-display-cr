@@ -10,6 +10,7 @@ import StoreIdentityEnhancer from "@/components/StoreIdentityEnhancer";
 import PaymentSinpeContactEnhancer from "@/components/PaymentSinpeContactEnhancer";
 import ProfileAvatarEnhancer from "@/components/ProfileAvatarEnhancer";
 import PublicStorefrontIdentityEnhancer from "@/components/PublicStorefrontIdentityEnhancer";
+import AppMenuIdentityEnhancer from "@/components/AppMenuIdentityEnhancer";
 import PrivateRouteBoundary from "@/components/PrivateRouteBoundary";
 import AppBackground from "@/components/AppBackground";
 
@@ -42,5 +43,5 @@ const languageScript = `
 `;
 
 export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){
- return <html lang="es" data-theme="dark" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{__html:themeScript}}/><script dangerouslySetInnerHTML={{__html:languageScript}}/></head><body className="antialiased"><AppBackground variant="rings-right"/><div className="app-content-layer"><PrivateRouteBoundary>{children}</PrivateRouteBoundary><CardFinishEffects/><DoubleFaceImageEnhancer/><SellerDiscoveryEnhancer/><StoreIdentityEnhancer/><PaymentSinpeContactEnhancer/><ProfileAvatarEnhancer/><PublicStorefrontIdentityEnhancer/></div></body></html>;
+ return <html lang="es" data-theme="dark" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{__html:themeScript}}/><script dangerouslySetInnerHTML={{__html:languageScript}}/></head><body className="antialiased"><AppBackground variant="rings-right"/><div className="app-content-layer"><PrivateRouteBoundary>{children}</PrivateRouteBoundary><CardFinishEffects/><DoubleFaceImageEnhancer/><SellerDiscoveryEnhancer/><StoreIdentityEnhancer/><PaymentSinpeContactEnhancer/><ProfileAvatarEnhancer/><PublicStorefrontIdentityEnhancer/><AppMenuIdentityEnhancer/></div></body></html>;
 }
