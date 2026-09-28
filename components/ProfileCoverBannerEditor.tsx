@@ -11,6 +11,12 @@ export const COVER_PRESETS=[
  {id:"ocean",labelEs:"Océano",labelEn:"Ocean",className:"bg-[radial-gradient(circle_at_70%_20%,#78d8e8_0_6%,transparent_22%),linear-gradient(160deg,#163c50,#176c7d_48%,#0c222a)]"},
  {id:"ember",labelEs:"Brasas",labelEn:"Ember",className:"bg-[radial-gradient(circle_at_65%_70%,#e87935_0_5%,#7b301d_20%,transparent_42%),linear-gradient(135deg,#291714,#111713)]"},
  {id:"arcane",labelEs:"Arcano",labelEn:"Arcane",className:"bg-[radial-gradient(circle_at_50%_45%,#a77cff_0_5%,#513b79_18%,transparent_38%),linear-gradient(145deg,#211934,#111713_70%)]"},
+ {id:"azorius",labelEs:"Azorius",labelEn:"Azorius",className:"bg-[url('/banners/Azorius.webp')] bg-cover bg-center"},
+ {id:"dimir",labelEs:"Dimir",labelEn:"Dimir",className:"bg-[url('/banners/Dimir.webp')] bg-cover bg-center"},
+ {id:"golgari",labelEs:"Golgari",labelEn:"Golgari",className:"bg-[url('/banners/Golgari.webp')] bg-cover bg-center"},
+ {id:"izzet",labelEs:"Izzet",labelEn:"Izzet",className:"bg-[url('/banners/Izzet.webp')] bg-cover bg-center"},
+ {id:"rakdos",labelEs:"Rakdos",labelEn:"Rakdos",className:"bg-[url('/banners/Rakdos.webp')] bg-cover bg-center"},
+ {id:"selesnya",labelEs:"Selesnya",labelEn:"Selesnya",className:"bg-[url('/banners/Selesnya.webp')] bg-cover bg-center"},
 ] as const;
 export type CoverPreset=typeof COVER_PRESETS[number]["id"];
 export function coverPresetClass(value?:string|null){return COVER_PRESETS.find(p=>p.id===value)?.className||COVER_PRESETS[0].className}
