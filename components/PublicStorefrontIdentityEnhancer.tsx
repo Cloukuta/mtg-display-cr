@@ -1,0 +1,28 @@
+"use client";
+
+import {useEffect,useState} from "react";
+import {createPortal} from "react-dom";
+import {MapPin} from "lucide-react";
+import {coverPresetClass} from "@/components/ProfileCoverBannerEditor";
+import StoreIdentityBadges from "@/components/StoreIdentityBadges";
+import {getSupabase} from "@/lib/supabase";
+import {DEFAULT_LANGUAGE,LANGUAGE_STORAGE_KEY,type Language} from "@/lib/i18n";
+
+type Profile={id:string;public_name:string|null;store_name:string|null;location:string|null;delivery_text:string|null;seller_type:string|null;verification_status:string|null;avatar_key:string|null;store_logo_path:string|null;cover_banner_preset:string|null;cover_banner_path:string|null};
+type Pricing={usd_to_crc:number};
+const crc=new Intl.NumberFormat("es-CR",{style:"currency",currency:"CRC",maximumFractionDigits:0});
+
+function nameOf(profile:Profile){return profile.seller_type==="store"&&profile.store_name?.trim()?profile.store_name.trim():profile.public_name?.trim()||"Seller"}
+
+export default function PublicStorefrontIdentityEnhancer(){
+ const[host,setHost]=useState<HTMLElement|null>(null),[profile,setProfile]=useState<Profile|null>(null),[pricing,setPricing]=useState<Pricing>({usd_to_crc:520}),[language,setLanguage]=useState<Language>(DEFAULT_LANGUAGE);
+ useEffect(()=>{const match=location.pathname.match(/^\/v\/([^/]+)\/?$/);if(!match)return;const slug=decodeURIComponent(match[1]);const stored=localStorage.getItem(LANGUAGE_STORAGE_KEY);if(stored==="es"||stored==="en")setLanguage(stored);const languageHandler=(e:Event)=>{const value=(e as CustomEvent<Language>).detail;if(value==="es"||value==="en")setLanguage(value)};window.addEventListener("mtg-language-change",languageHandler);
+  let timer:number|undefined,portalHost:HTMLDivElement|null=null,oldHeader:HTMLElement|null=null;
+  const attach=()=>{const label=Array.from(document.querySelectorAll("p")).find(node=>/^(Catálogo público|Public catalog)$/i.test(node.textContent?.trim()||""));const header=label?.parentElement?.parentElement as HTMLElement|null;const section=header?.parentElement as HTMLElement|null;if(!header||!section)return false;if(!portalHost){portalHost=document.createElement("div");portalHost.dataset.publicStorefrontIdentity="1";section.insertBefore(portalHost,header);setHost(portalHost)}oldHeader=header;header.style.display="none";return true};
+  const locate=()=>{if(!attach())timer=window.setTimeout(locate,120)};locate();
+  const s=getSupabase();if(s)void s.from("profiles").select("id,public_name,store_name,location,delivery_text,seller_type,verification_status,avatar_key,store_logo_path,cover_banner_preset,cover_banner_path").eq("slug",slug).eq("published",true).single().then(async({data})=>{if(!data)return;const seller=data as Profile;setProfile(seller);const{data:settings}=await s.from("seller_pricing_settings").select("usd_to_crc").eq("seller_id",seller.id).maybeSingle();if(settings?.usd_to_crc)setPricing({usd_to_crc:Number(settings.usd_to_crc)})});
+  return()=>{window.removeEventListener("mtg-language-change",languageHandler);if(timer)window.clearTimeout(timer);if(oldHeader)oldHeader.style.display="";portalHost?.remove()};
+ },[]);
+ if(!host||!profile)return null;const es=language==="es",name=nameOf(profile),s=getSupabase(),bannerUrl=profile.cover_banner_path&&s?s.storage.from("store-banners").getPublicUrl(profile.cover_banner_path).data.publicUrl:null,logoUrl=profile.seller_type==="store"&&profile.store_logo_path&&s?s.storage.from("store-logos").getPublicUrl(profile.store_logo_path).data.publicUrl:null,avatarUrl=profile.seller_type!=="store"&&profile.avatar_key?`/avatars/${profile.avatar_key}.webp`:null,initials=name.split(/\s+/).slice(0,2).map(part=>part[0]).join("").toUpperCase();
+ return createPortal(<div className="border-b border-border pb-6"><div className={`relative h-[190px] overflow-hidden rounded-[18px] border border-primary/25 sm:h-[210px] ${coverPresetClass(profile.cover_banner_preset)}`}>{bannerUrl&&<img src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover"/>}<div className="absolute inset-0 bg-gradient-to-r from-background/30 via-transparent to-background/20"/></div><div className="relative -mt-[74px] flex flex-col gap-4 px-4 sm:-mt-[68px] sm:flex-row sm:items-end sm:px-7"><div className="shrink-0">{logoUrl?<img src={logoUrl} alt={`${name} logo`} className="h-[118px] w-[132px] rounded-[18px] border-2 border-[#748A62] bg-[#0B110D] object-contain p-1 shadow-xl"/>:avatarUrl?<img src={avatarUrl} alt="" className="h-[118px] w-[118px] rounded-[18px] border-2 border-[#748A62] object-cover shadow-xl"/>:<div className="grid h-[118px] w-[132px] place-items-center rounded-[18px] border-2 border-[#748A62] bg-[#0B110D] font-serif text-2xl font-bold text-primary shadow-xl">{initials}</div>}</div><div className="min-w-0 flex-1 pb-1"><p className="text-xs font-bold uppercase tracking-[.15em] text-primary">{es?"Catálogo público":"Public catalog"}</p><div className="mt-1 flex flex-wrap items-center gap-2"><h1 className="truncate font-serif text-3xl font-bold sm:text-4xl">{name}</h1><StoreIdentityBadges sellerType={profile.seller_type} verificationStatus={profile.verification_status} compact/></div><p className="mt-2 truncate text-sm text-muted-foreground"><MapPin size={13} className="mr-1 inline"/>{profile.location||"Costa Rica"}{profile.delivery_text?` · ${profile.delivery_text}`:""}</p></div><div className="mb-1 shrink-0 rounded-[14px] border border-border bg-card/95 px-4 py-3 sm:min-w-[190px]"><p className="text-[10px] font-semibold text-muted-foreground">{es?"Tipo de cambio del vendedor":"Seller exchange rate"}</p><p className="mt-1 font-serif text-xl font-bold">$1 = {crc.format(pricing.usd_to_crc)}</p></div></div></div>,host);
+}
