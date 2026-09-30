@@ -75,18 +75,11 @@ def fetch_cardkingdom_pricelist():
 
 
 def finish_for_product(product):
-    # CK does not expose a dedicated finish enum. Special finishes are encoded
-    # in variation/URL/SKU while is_foil remains true, so prefer explicit CK
-    # signals before falling back to ordinary foil/nonfoil.
     variation = str(product.get("variation") or "").strip().lower()
     url = str(product.get("url") or "").strip().lower()
     sku = str(product.get("sku") or "").strip().upper()
-
-    if "surge foil" in variation or "surge-foil" in url:
-        return "surgefoil"
-    if "foil etched" in variation or "foil-etched" in url or sku.startswith("DFE"):
-        return "etched"
-
+    if "surge foil" in variation or "surge-foil" in url: return "surgefoil"
+    if "foil etched" in variation or "foil-etched" in url or sku.startswith("DFE"): return "etched"
     value = product.get("is_foil")
     return "foil" if value is True or value == 1 or str(value).strip().lower() in {"true","1","yes"} else "nonfoil"
 
@@ -112,20 +105,32 @@ def product_name(product):
     return ""
 
 
-def build_direct_prices(products, target_ids):
-    prices = {}; matched_products = 0
+def build_all_direct_prices(products):
+    prices = {}; usable_products = 0; missing_scryfall = 0; missing_price = 0
     for product in products:
         sid = product.get("scryfall_id")
-        if not sid or str(sid) not in target_ids: continue
+        if not sid:
+            missing_scryfall += 1
+            continue
         product_prices = condition_prices(product)
-        if not product_prices: continue
-        matched_products += 1; sid = str(sid); finish = finish_for_product(product)
+        if not product_prices:
+            missing_price += 1
+            continue
+        usable_products += 1; sid = str(sid); finish = finish_for_product(product)
         finish_prices = prices.setdefault(sid, {}).setdefault(finish, {})
         for condition, price in product_prices.items():
             current = finish_prices.get(condition)
             if current is None or price < current: finish_prices[condition] = price
-    print(f"CK products matching our catalog: {matched_products:,}")
-    print(f"Scryfall printings with direct CK price: {len(prices):,}")
+    print(f"CK products with usable Scryfall ID + price: {usable_products:,}")
+    print(f"CK products without Scryfall ID: {missing_scryfall:,}")
+    print(f"CK products with Scryfall ID but no usable price: {missing_price:,}")
+    print(f"Scryfall printings available in global CK cache: {len(prices):,}")
+    return prices
+
+
+def select_catalog_prices(all_prices, target_ids):
+    prices = {sid: all_prices[sid] for sid in target_ids if sid in all_prices}
+    print(f"Scryfall printings with direct CK price in our catalog: {len(prices):,}")
     return prices
 
 
@@ -141,9 +146,7 @@ def print_unresolved_diagnostics(products, target_cards, prices):
         name = normalize_name(product_name(product))
         if name: by_name[name].append(product)
     for card in missing:
-        sid = str(card.get("scryfall_id") or "")
-        name = str(card.get("name") or "")
-        candidates = by_name.get(normalize_name(name), [])
+        sid = str(card.get("scryfall_id") or ""); name = str(card.get("name") or ""); candidates = by_name.get(normalize_name(name), [])
         print("\n------------------------------------------------------------")
         print(f"Name: {name}")
         print(f"Set / Collector: {str(card.get('set_code') or '').upper()} / {card.get('collector_number')}")
@@ -185,6 +188,10 @@ def build_card_price_rows(prices,timestamp):
     return [{"scryfall_id":sid,"source":"cardkingdom","finish":finish,"condition":condition,"price_usd":price,"updated_at":timestamp} for sid,finishes in prices.items() for finish,conditions in finishes.items() for condition,price in conditions.items()]
 
 
+def build_cache_rows(prices,timestamp):
+    return [{"scryfall_id":sid,"finish":finish,"condition":condition,"price_usd":price,"updated_at":timestamp} for sid,finishes in prices.items() for finish,conditions in finishes.items() for condition,price in conditions.items()]
+
+
 def upsert_condition_prices(rows):
     updated=0
     for batch in chunked(rows,UPSERT_BATCH_SIZE):
@@ -192,20 +199,36 @@ def upsert_condition_prices(rows):
     return updated
 
 
-def sync(prices):
-    timestamp=datetime.now(timezone.utc).replace(microsecond=0).isoformat(); print("Syncing Card Kingdom condition prices to Supabase...")
-    rows=build_card_price_rows(prices,timestamp); condition_count=upsert_condition_prices(rows); normal_count,foil_count=patch_legacy_card_prices(prices,timestamp)
-    counts={condition:0 for condition in CK_CONDITION_FIELDS}
-    finish_counts=defaultdict(int)
+def upsert_global_cache(rows):
+    updated=0
+    for batch in chunked(rows,UPSERT_BATCH_SIZE):
+        supabase_request("POST","cardkingdom_price_cache?on_conflict=scryfall_id,finish,condition",batch,{"Prefer":"resolution=merge-duplicates,return=minimal"}); updated+=len(batch)
+    return updated
+
+
+def print_row_counts(label, rows):
+    counts={condition:0 for condition in CK_CONDITION_FIELDS}; finish_counts=defaultdict(int)
     for row in rows:
-        counts[row["condition"]]+=1
-        finish_counts[row["finish"]]+=1
-    print(f"Condition price rows upserted: {condition_count:,}")
+        counts[row["condition"]]+=1; finish_counts[row["finish"]]+=1
+    print(label)
+    print(f"  rows: {len(rows):,}")
     for condition in ("NM","EX","VG","G"): print(f"  {condition}: {counts[condition]:,}")
-    print("Finish price rows:")
-    for finish in ("nonfoil","foil","etched","surgefoil"):
-        print(f"  {finish}: {finish_counts.get(finish, 0):,}")
-    print(f"Legacy CK normal NM prices updated: {normal_count:,}"); print(f"Legacy CK foil NM prices updated:   {foil_count:,}")
+    for finish in ("nonfoil","foil","etched","surgefoil"): print(f"  {finish}: {finish_counts.get(finish, 0):,}")
+
+
+def sync(all_prices, catalog_prices):
+    timestamp=datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    print("Syncing global Card Kingdom cache to Supabase...")
+    cache_rows=build_cache_rows(all_prices,timestamp); cache_count=upsert_global_cache(cache_rows)
+    print_row_counts("Global CK cache summary:", cache_rows)
+    print(f"Global CK cache rows upserted: {cache_count:,}")
+
+    print("Syncing existing catalog Card Kingdom prices to Supabase...")
+    rows=build_card_price_rows(catalog_prices,timestamp); condition_count=upsert_condition_prices(rows); normal_count,foil_count=patch_legacy_card_prices(catalog_prices,timestamp)
+    print_row_counts("Existing catalog CK price summary:", rows)
+    print(f"Condition price rows upserted: {condition_count:,}")
+    print(f"Legacy CK normal NM prices updated: {normal_count:,}")
+    print(f"Legacy CK foil NM prices updated:   {foil_count:,}")
     print("Card Kingdom etched and surge foil prices are synchronized when CK explicitly identifies those finishes.")
 
 
@@ -219,10 +242,17 @@ def print_validation(prices):
 
 
 def main():
-    require_environment(); target_cards=fetch_target_cards(); target_ids=set(target_cards)
-    if not target_ids: print("No cards exist in public.cards. Nothing to update."); return
-    products=fetch_cardkingdom_pricelist(); prices=build_direct_prices(products,target_ids); print_validation(prices); print_unresolved_diagnostics(products,target_cards,prices); sync(prices)
-    missing=len(target_ids-set(prices)); print(f"Catalog printings without a direct CK match: {missing:,}"); print("Direct Card Kingdom condition-price synchronization completed successfully.")
+    require_environment()
+    target_cards=fetch_target_cards(); target_ids=set(target_cards)
+    products=fetch_cardkingdom_pricelist()
+    all_prices=build_all_direct_prices(products)
+    catalog_prices=select_catalog_prices(all_prices,target_ids)
+    print_validation(all_prices)
+    print_unresolved_diagnostics(products,target_cards,catalog_prices)
+    sync(all_prices,catalog_prices)
+    missing=len(target_ids-set(catalog_prices))
+    print(f"Catalog printings without a direct CK match: {missing:,}")
+    print("Global Card Kingdom cache + existing catalog synchronization completed successfully.")
 
 
 if __name__ == "__main__": main()
