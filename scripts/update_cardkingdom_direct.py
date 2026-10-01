@@ -3,6 +3,7 @@ import os
 import re
 import urllib.parse
 import urllib.request
+import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 
@@ -58,6 +59,16 @@ def as_price(value):
     return round(price, 2) if price >= 0 else None
 
 
+def normalize_scryfall_id(value):
+    if value is None: return None
+    raw = str(value).strip()
+    if not raw: return None
+    try:
+        return str(uuid.UUID(raw))
+    except (ValueError, AttributeError, TypeError):
+        return None
+
+
 def extract_rows(payload):
     if isinstance(payload, list): return payload
     if isinstance(payload, dict):
@@ -106,24 +117,32 @@ def product_name(product):
 
 
 def build_all_direct_prices(products):
-    prices = {}; usable_products = 0; missing_scryfall = 0; missing_price = 0
+    prices = {}; usable_products = 0; missing_scryfall = 0; invalid_scryfall = 0; missing_price = 0
+    invalid_samples = []
     for product in products:
-        sid = product.get("scryfall_id")
-        if not sid:
+        raw_sid = product.get("scryfall_id")
+        if not raw_sid:
             missing_scryfall += 1
+            continue
+        sid = normalize_scryfall_id(raw_sid)
+        if not sid:
+            invalid_scryfall += 1
+            if len(invalid_samples) < 10: invalid_samples.append(str(raw_sid))
             continue
         product_prices = condition_prices(product)
         if not product_prices:
             missing_price += 1
             continue
-        usable_products += 1; sid = str(sid); finish = finish_for_product(product)
+        usable_products += 1; finish = finish_for_product(product)
         finish_prices = prices.setdefault(sid, {}).setdefault(finish, {})
         for condition, price in product_prices.items():
             current = finish_prices.get(condition)
             if current is None or price < current: finish_prices[condition] = price
-    print(f"CK products with usable Scryfall ID + price: {usable_products:,}")
+    print(f"CK products with usable Scryfall UUID + price: {usable_products:,}")
     print(f"CK products without Scryfall ID: {missing_scryfall:,}")
-    print(f"CK products with Scryfall ID but no usable price: {missing_price:,}")
+    print(f"CK products with invalid Scryfall UUID: {invalid_scryfall:,}")
+    if invalid_samples: print(f"Invalid Scryfall UUID samples: {', '.join(invalid_samples)}")
+    print(f"CK products with valid Scryfall UUID but no usable price: {missing_price:,}")
     print(f"Scryfall printings available in global CK cache: {len(prices):,}")
     return prices
 
