@@ -1,0 +1,1 @@
+Required user action after merge: rerun the existing workflow only; no Supabase SQL is needed.
