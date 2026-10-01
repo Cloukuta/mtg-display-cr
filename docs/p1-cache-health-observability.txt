@@ -1,0 +1,1 @@
+Future PostgREST HTTP failures now include the response body in the raised error, making malformed filters or schema mismatches visible in GitHub Actions logs.
