@@ -1,0 +1,1 @@
+No SQL or Supabase schema change is required for this hotfix.
