@@ -1,0 +1,1 @@
+Merge this hotfix into main before rerunning the scheduled price workflow.
