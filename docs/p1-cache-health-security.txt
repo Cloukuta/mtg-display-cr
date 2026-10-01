@@ -1,0 +1,1 @@
+No credentials, permissions, RLS policies, or database grants are changed by this hotfix.
