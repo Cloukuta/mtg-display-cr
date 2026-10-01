@@ -1,0 +1,1 @@
+Fix: encode the full PostgREST updated_at filter value so +00:00 is not decoded as whitespace. Also expose Supabase HTTP response bodies on future health-check failures.

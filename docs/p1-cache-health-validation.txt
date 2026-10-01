@@ -1,0 +1,1 @@
+After merge, run Update Card Kingdom Prices manually once and inspect the Check Card Kingdom cache health step. Expected: no HTTP 400, cached row count is non-zero, and the health summary prints oldest/newest timestamps plus stale row count.

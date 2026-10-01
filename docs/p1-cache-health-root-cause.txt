@@ -1,0 +1,1 @@
+Root cause: urllib.parse.quote was configured to keep '+' safe while building a PostgREST timestamptz filter. In URL query parsing, '+' can become a space, producing an invalid timestamp and HTTP 400.

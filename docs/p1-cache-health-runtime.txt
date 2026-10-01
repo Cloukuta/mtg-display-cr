@@ -1,0 +1,1 @@
+Runtime behavior remains read-only for the health checker; only update_cardkingdom_direct.py writes price data.

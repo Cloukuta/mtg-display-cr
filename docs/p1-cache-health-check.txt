@@ -1,0 +1,1 @@
+Health checker remains read-only and uses the service role only for REST reads.

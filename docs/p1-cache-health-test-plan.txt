@@ -1,0 +1,1 @@
+Test plan: merge hotfix, manually dispatch Update Card Kingdom Prices on main, verify the price synchronization completes, then verify Check Card Kingdom cache health prints CARD KINGDOM CACHE HEALTH and exits 0.
