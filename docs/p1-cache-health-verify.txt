@@ -1,0 +1,1 @@
+Verify stale row count query no longer returns HTTP 400.
