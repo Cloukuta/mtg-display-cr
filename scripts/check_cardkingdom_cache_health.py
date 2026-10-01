@@ -2,7 +2,7 @@ import json
 import os
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -33,10 +33,16 @@ def request(path, prefer_count=False):
         headers=headers,
         method="GET",
     )
-    with urllib.request.urlopen(req, timeout=180) as response:
-        body = response.read()
-        payload = json.loads(body.decode("utf-8")) if body else []
-        return payload, response.headers
+    try:
+        with urllib.request.urlopen(req, timeout=180) as response:
+            body = response.read()
+            payload = json.loads(body.decode("utf-8")) if body else []
+            return payload, response.headers
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"Supabase GET {path} failed ({exc.code}): {body}"
+        ) from exc
 
 
 def exact_count(path):
@@ -53,13 +59,17 @@ def exact_count(path):
 def main():
     require_environment()
     now = datetime.now(timezone.utc)
-    cutoff = now.timestamp() - STALE_HOURS * 3600
-    cutoff_iso = datetime.fromtimestamp(cutoff, timezone.utc).replace(microsecond=0).isoformat()
+    cutoff = now - timedelta(hours=STALE_HOURS)
+    cutoff_iso = cutoff.replace(microsecond=0).isoformat()
 
-    total_rows = exact_count("cardkingdom_price_cache?select=id")
+    total_rows = exact_count("cardkingdom_price_cache?select=scryfall_id")
+
+    # PostgREST filter values must be URL encoded as query values. In particular,
+    # an ISO-8601 UTC offset contains '+', which otherwise becomes a space when
+    # parsed as a query string and causes PostgreSQL timestamptz to return 400.
+    stale_filter = urllib.parse.quote(f"lt.{cutoff_iso}", safe="")
     stale_rows = exact_count(
-        "cardkingdom_price_cache?select=id&updated_at=lt."
-        + urllib.parse.quote(cutoff_iso, safe="-:T+")
+        f"cardkingdom_price_cache?select=scryfall_id&updated_at={stale_filter}"
     )
 
     newest, _ = request(
