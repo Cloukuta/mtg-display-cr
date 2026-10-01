@@ -1,0 +1,1 @@
+Rollback only requires reverting the health-check script change; no database rollback is necessary.
