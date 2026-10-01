@@ -1,0 +1,1 @@
+Post-merge: manually run Update Card Kingdom Prices once on main and share the Check Card Kingdom cache health output for final P1.6 validation.
