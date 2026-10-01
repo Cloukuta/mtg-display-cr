@@ -1,0 +1,1 @@
+Expected result: the daily workflow can count stale cache rows through PostgREST without HTTP 400 and continue to report cache health after the price update.
