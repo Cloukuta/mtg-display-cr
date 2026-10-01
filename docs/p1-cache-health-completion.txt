@@ -1,0 +1,1 @@
+P1.6 can be marked complete after the post-merge workflow prints a non-empty cache health summary without an HTTP error.
