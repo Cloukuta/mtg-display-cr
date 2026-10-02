@@ -18,10 +18,22 @@ export async function POST(request:NextRequest){
   const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
   const processorSecret=process.env.EMAIL_PROCESSOR_SECRET;
+  const brevoApiKey=process.env.BREVO_API_KEY;
+  const fromAddress=process.env.EMAIL_FROM_ADDRESS;
   const supplied=request.headers.get("authorization");
   if(!supabaseUrl||!serviceKey)return NextResponse.json({error:"Email processor database configuration is missing"},{status:503});
   if(!processorSecret)return NextResponse.json({error:"Email processor is not configured"},{status:503});
   if(supplied!==`Bearer ${processorSecret}`)return NextResponse.json({error:"Unauthorized"},{status:401});
+
+  // Validate delivery configuration before reading or claiming outbox jobs.
+  // Infrastructure/configuration failures must never consume a delivery attempt.
+  if(!brevoApiKey||!fromAddress){
+    console.error("Email processor delivery configuration is missing",{
+      brevoApiKeyConfigured:Boolean(brevoApiKey),
+      fromAddressConfigured:Boolean(fromAddress),
+    });
+    return NextResponse.json({error:"Email server is not configured"},{status:503});
+  }
 
   const supabase=createClient(supabaseUrl,serviceKey,{auth:{persistSession:false}});
   const now=new Date().toISOString();
