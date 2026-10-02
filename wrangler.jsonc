@@ -1,0 +1,8 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "vars": {
+    "EMAIL_FROM_ADDRESS": "mtgdisplaycr@gmail.com",
+    "EMAIL_FROM_NAME": "MTG Display CR",
+    "EMAIL_REPLY_TO": "mtgdisplaycr@gmail.com"
+  }
+}
