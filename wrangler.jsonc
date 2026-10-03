@@ -4,6 +4,12 @@
   "triggers": {
     "crons": ["*/5 * * * *"]
   },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
   "vars": {
     "EMAIL_FROM_ADDRESS": "mtgdisplaycr@gmail.com",
     "EMAIL_FROM_NAME": "MTG Display CR",
