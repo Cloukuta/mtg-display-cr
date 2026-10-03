@@ -1,5 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "./worker/index.ts",
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
   "vars": {
     "EMAIL_FROM_ADDRESS": "mtgdisplaycr@gmail.com",
     "EMAIL_FROM_NAME": "MTG Display CR",
